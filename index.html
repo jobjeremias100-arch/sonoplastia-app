@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sonoplastia — Painel do Operador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================================
+       VARIÁVEIS E RESET
+    ========================================================= */
+    :root {
+      --bg-deep:      #09090f;
+      --bg-panel:     #111118;
+      --bg-card:      #16161f;
+      --bg-card-alt:  #1c1c28;
+      --border:       #2a2a3a;
+      --border-glow:  #3d3d5c;
+
+      --text-primary: #e8e8f0;
+      --text-muted:   #6b6b88;
+      --text-dim:     #3a3a55;
+
+      --accent:       #7c6af7;
+      --accent-dim:   #3e3578;
+      --accent-glow:  rgba(124, 106, 247, 0.25);
+
+      --green:        #3ecf8e;
+      --green-dim:    #1a5c40;
+      --green-glow:   rgba(62, 207, 142, 0.2);
+
+      --amber:        #f5a623;
+      --amber-dim:    #6b4610;
+      --amber-glow:   rgba(245, 166, 35, 0.2);
+
+      --red:          #f04a5a;
+      --red-glow:     rgba(240, 74, 90, 0.2);
+
+      --youtube:      #ff0000;
+      --audio-color:  #3ecf8e;
+      --video-color:  #7c6af7;
+
+      --radius:       8px;
+      --radius-lg:    14px;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Grade de ruído sutil no fundo */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* =========================================================
+       LAYOUT PRINCIPAL
+    ========================================================= */
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* =========================================================
+       HEADER / TOPBAR
+    ========================================================= */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .brand-subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .topbar-status {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .status-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* =========================================================
+       BOTÕES GLOBAIS
+    ========================================================= */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover  { border-color: var(--border-glow); background: var(--bg-card-alt); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-accent {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-accent:hover { background: var(--accent); box-shadow: 0 0 18px var(--accent-glow); }
+
+    .btn-green {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .btn-green:hover  { background: var(--green); color: #000; box-shadow: 0 0 18px var(--green-glow); }
+
+    .btn-amber {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .btn-amber:hover { background: var(--amber); color: #000; box-shadow: 0 0 14px var(--amber-glow); }
+
+    .btn-danger {
+      background: transparent;
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .btn-danger:hover { background: var(--red-glow); }
+
+    .btn-sm { padding: 5px 11px; font-size: 10px; }
+    .btn-xs { padding: 4px 9px;  font-size: 10px; }
+
+    /* =========================================================
+       CONTEÚDO CENTRAL
+    ========================================================= */
+    .content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      grid-template-rows: 1fr;
+      gap: 0;
+      overflow: hidden;
+      height: calc(100vh - 65px);
+    }
+
+    /* =========================================================
+       PAINEL PRINCIPAL — ROTEIRO
+    ========================================================= */
+    .panel-main {
+      padding: 24px 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel-main::-webkit-scrollbar       { width: 4px; }
+    .panel-main::-webkit-scrollbar-track { background: transparent; }
+    .panel-main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 14px;
+      height: 1px;
+      background: var(--border-glow);
+    }
+
+    /* =========================================================
+       LISTA DO ROTEIRO
+    ========================================================= */
+    #roteiro-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Card de item do roteiro */
+    .roteiro-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Barra lateral colorida por tipo */
+    .roteiro-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 99px 0 0 99px;
+      background: var(--text-dim);
+      transition: background 0.2s;
+    }
+
+    .roteiro-item[data-tipo="youtube"]::before { background: var(--youtube); }
+    .roteiro-item[data-tipo="audio"]::before   { background: var(--audio-color); }
+    .roteiro-item[data-tipo="video"]::before   { background: var(--video-color); }
+
+    /* Estado: preparado */
+    .roteiro-item.preparado {
+      border-color: var(--accent);
+      background: var(--bg-card-alt);
+      box-shadow: 0 0 0 1px var(--accent-dim), inset 0 0 40px var(--accent-glow);
+    }
+
+    /* Estado: tocando */
+    .roteiro-item.tocando {
+      border-color: var(--green);
+      background: var(--bg-card-alt);
+      box-shadow: 0 0 0 1px var(--green-dim), inset 0 0 40px var(--green-glow);
+      animation: glow-item 2.5s ease-in-out infinite;
+    }
+
+    @keyframes glow-item {
+      0%, 100% { box-shadow: 0 0 0 1px var(--green-dim), inset 0 0 40px var(--green-glow); }
+      50%       { box-shadow: 0 0 0 1px var(--green),     inset 0 0 60px var(--green-glow); }
+    }
+
+    /* Ordem / índice */
+    .item-ordem {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-dim);
+      min-width: 28px;
+      text-align: center;
+      font-family: var(--font-display);
+    }
+
+    .roteiro-item.tocando  .item-ordem { color: var(--green); }
+    .roteiro-item.preparado .item-ordem { color: var(--accent); }
+
+    /* Info central */
+    .item-info { overflow: hidden; }
+
+    .item-titulo {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .item-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .item-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .badge-youtube { background: rgba(255,0,0,0.15); color: var(--youtube); border: 1px solid rgba(255,0,0,0.3); }
+    .badge-audio   { background: rgba(62,207,142,0.1); color: var(--audio-color); border: 1px solid rgba(62,207,142,0.3); }
+    .badge-video   { background: rgba(124,106,247,0.1); color: var(--video-color); border: 1px solid rgba(124,106,247,0.3); }
+
+    .item-status-text {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .roteiro-item.tocando  .item-status-text { color: var(--green); }
+    .roteiro-item.preparado .item-status-text { color: var(--accent); }
+
+    /* Ações do item */
+    .item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 130px;
+    }
+
+    /* Estado "tocando" exibe ícone animado */
+    .live-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+
+    .live-badge .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 1s infinite;
+    }
+
+    .roteiro-item.tocando .live-badge { display: flex; }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      height: 76px;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { opacity: 0.5; }
+      50%  { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* Vazio */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
+    }
+
+    .empty-state .empty-icon { font-size: 40px; opacity: 0.4; }
+    .empty-state .empty-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text-dim); }
+    .empty-state .empty-sub   { font-size: 12px; max-width: 300px; }
+
+    /* =========================================================
+       PAINEL LATERAL — SIDEBAR
+    ========================================================= */
+    .panel-side {
+      border-left: 1px solid var(--border);
+      background: var(--bg-panel);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .panel-side::-webkit-scrollbar       { width: 4px; }
+    .panel-side::-webkit-scrollbar-track { background: transparent; }
+    .panel-side::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    .side-section {
+      padding: 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .side-section-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Formulário: novo item manual */
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      letter-spacing: 0.06em;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .form-select option { background: var(--bg-card); }
+
+    /* Dica de fonte de link */
+    .link-dica {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-top: 4px;
+    }
+
+    .link-dica-titulo {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+
+    .link-dica-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+
+    .link-dica-item:last-child { margin-bottom: 0; }
+    .link-dica-item span:first-child { flex-shrink: 0; }
+
+    /* Monitor ao vivo: item tocando agora */
+    .now-playing-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .now-playing-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .now-playing-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .now-playing-idle { color: var(--text-dim); font-style: italic; font-size: 13px; }
+
+    /* Botão de abrir projetor */
+    .projector-btn {
+      width: 100%;
+      justify-content: center;
+      padding: 12px;
+      font-size: 12px;
+    }
+
+    /* Toast / Notificações */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text-primary);
+      min-width: 240px;
+      animation: toast-in 0.25s ease;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Responsividade básica */
+    @media (max-width: 860px) {
+      .content { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+      .panel-side { border-left: none; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+
+    <!-- =====================================================
+         TOPBAR
+    ===================================================== -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="brand-icon">🎛️</div>
+        <div>
+          <div class="brand-title">Sonoplastia</div>
+          <div class="brand-subtitle">Painel do Operador</div>
+        </div>
+      </div>
+
+      <div class="topbar-status">
+        <div class="status-chip">
+          <div class="status-dot" id="firebase-status-dot"></div>
+          <span id="firebase-status-label">Conectando…</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Abre a tela de projeção em nova janela -->
+        <button class="btn btn-accent" onclick="abrirProjecao()">
+          📽️ &nbsp;Abrir Projetor
+        </button>
+      </div>
+    </header>
+
+    <!-- =====================================================
+         CONTEÚDO PRINCIPAL
+    ===================================================== -->
+    <div class="content">
+
+      <!-- COLUNA ESQUERDA: Roteiro -->
+      <main class="panel-main">
+        <div class="section-header">
+          <span class="section-label">Roteiro do Culto</span>
+          <span id="item-count" style="font-size:11px; color:var(--text-dim)"></span>
+        </div>
+
+        <!-- Lista populada dinamicamente pelo app.js -->
+        <div id="roteiro-list">
+          <!-- Skeletons de carregamento -->
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </main>
+
+      <!-- COLUNA DIREITA: Sidebar -->
+      <aside class="panel-side">
+
+        <!-- Monitor: "Ao Vivo Agora" -->
+        <div class="side-section">
+          <div class="side-section-title">🟢 &nbsp;Ao Vivo Agora</div>
+          <div class="now-playing-card">
+            <span class="now-playing-label">Projetando:</span>
+            <span class="now-playing-title now-playing-idle" id="now-playing-title">
+              Nenhum item ativo
+            </span>
+          </div>
+        </div>
+
+        <!-- Ações rápidas -->
+        <div class="side-section">
+          <div class="side-section-title">⚡ Ações Rápidas</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button class="btn btn-danger btn-sm" id="btn-parar-tudo" onclick="pararTudo()">
+              ⏹ &nbsp;Parar Tudo / Tela Preta
+            </button>
+          </div>
+        </div>
+
+        <!-- Adicionar Áudio ou Vídeo por link -->
+        <div class="side-section">
+          <div class="side-section-title">🎵 &nbsp;Adicionar Áudio / Vídeo</div>
+
+          <div class="form-group">
+            <label class="form-label">Título do item</label>
+            <input class="form-input" type="text" id="midia-titulo" placeholder="Ex: Música de Entrada" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select class="form-select" id="midia-tipo">
+              <option value="audio">♪ Áudio</option>
+              <option value="video">◼ Vídeo</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Link direto do arquivo</label>
+            <input class="form-input" type="url" id="midia-url" placeholder="https://drive.google.com/..." />
+          </div>
+
+          <button class="btn btn-green btn-sm" style="width:100%; justify-content:center; margin-bottom:12px;" onclick="adicionarMidia()">
+            ＋ &nbsp;Adicionar ao Roteiro
+          </button>
+
+          <!-- Dica de como gerar o link -->
+          <div class="link-dica">
+            <div class="link-dica-titulo">💡 Como gerar o link</div>
+            <div class="link-dica-item">
+              <span>☁️</span>
+              <span><strong style="color:var(--text-primary)">Google Drive:</strong> Clique direito no arquivo → Compartilhar → "Qualquer pessoa com o link" → Copiar</span>
+            </div>
+            <div class="link-dica-item">
+              <span>📦</span>
+              <span><strong style="color:var(--text-primary)">Dropbox:</strong> Compartilhar → copiar link e trocar <code style="color:var(--accent)">?dl=0</code> por <code style="color:var(--accent)">?raw=1</code></span>
+            </div>
+            <div class="link-dica-item">
+              <span>🐙</span>
+              <span><strong style="color:var(--text-primary)">GitHub:</strong> Abra o arquivo no repositório → clique em "Raw" → copie a URL</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Adicionar item YouTube manualmente -->
+        <div class="side-section">
+          <div class="side-section-title">🎬 &nbsp;Adicionar YouTube</div>
+
+          <div class="form-group">
+            <label class="form-label">Título</label>
+            <input class="form-input" type="text" id="yt-titulo" placeholder="Ex: Louvor de Abertura" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">URL do YouTube</label>
+            <input class="form-input" type="url" id="yt-url" placeholder="https://youtu.be/..." />
+          </div>
+
+          <button class="btn btn-accent btn-sm" style="width:100%; justify-content:center;" onclick="adicionarYoutube()">
+            ＋ &nbsp;Adicionar ao Roteiro
+          </button>
+        </div>
+
+      </aside>
+    </div><!-- /.content -->
+
+  </div><!-- /.app-wrapper -->
+
+  <!-- Container de notificações (Toasts) -->
+  <div id="toast-container"></div>
+
+  <!-- Módulo principal da aplicação -->
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>
