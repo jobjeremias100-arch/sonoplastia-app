@@ -405,12 +405,14 @@ function iniciarProjecao() {
       width:  "100%",
       height: "100%",
       playerVars: {
-        autoplay:       0,
-        controls:       0, // Sem controles visíveis na projeção
+        autoplay:       1,
+        controls:       0,         // Sem controles visíveis na projeção
         modestbranding: 1,
         rel:            0,
         iv_load_policy: 3,
         fs:             0,
+        enablejsapi:    1,         // Obrigatório para controle via JS
+        origin:         window.location.origin, // Corrige erro de postMessage
       },
       events: {
         onReady: () => { ytReady = true; },
@@ -493,16 +495,28 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtu
 function _controlarAudio({ url, status, mudouItem }) {
   _mostrarPlayer("audio");
 
-  const audioEl    = document.getElementById("audio-player");
-  const audioWrap  = document.getElementById("audio-wrapper");
+  const audioEl   = document.getElementById("audio-player");
+  const audioWrap = document.getElementById("audio-wrapper");
 
-  if (mudouItem || audioEl.src !== url) {
+  // Só recarrega se mudou o item ou a URL é diferente
+  if (mudouItem || (url && audioEl.src !== url)) {
     audioEl.src = url;
     audioEl.load();
   }
 
   if (status === "tocando") {
-    audioEl.play().catch(console.error);
+    // Tenta dar play; se o navegador bloquear, aguarda interação
+    const playPromise = audioEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Bloqueio de autoplay: aguarda um clique na tela do projetor
+        const desbloquear = () => {
+          audioEl.play();
+          document.removeEventListener("click", desbloquear);
+        };
+        document.addEventListener("click", desbloquear);
+      });
+    }
     audioWrap.classList.add("audio-playing");
   } else {
     audioEl.pause();
@@ -518,13 +532,22 @@ function _controlarVideo({ url, status, mudouItem }) {
 
   const videoEl = document.getElementById("video-player");
 
-  if (mudouItem || videoEl.src !== url) {
+  if (mudouItem || (url && videoEl.src !== url)) {
     videoEl.src = url;
     videoEl.load();
   }
 
   if (status === "tocando") {
-    videoEl.play().catch(console.error);
+    const playPromise = videoEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        const desbloquear = () => {
+          videoEl.play();
+          document.removeEventListener("click", desbloquear);
+        };
+        document.addEventListener("click", desbloquear);
+      });
+    }
   } else {
     videoEl.pause();
   }
