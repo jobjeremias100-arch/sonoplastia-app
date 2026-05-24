@@ -57,10 +57,10 @@ if (isProjecao)  iniciarProjecao();
 function iniciarOperador() {
 
   // Expõe funções de ação para os botões HTML (onclick inline)
-  window.abrirProjecao   = abrirProjecao;
+  window.abrirProjecao    = abrirProjecao;
+  window.fecharProjecao   = fecharProjecao;
   window.pararTudo        = pararTudo;
   window.adicionarYoutube = adicionarYoutube;
-  window.adicionarMidia   = adicionarMidia;
 
   _escutarRoteiro();
 }
@@ -227,14 +227,24 @@ async function prepararItem(itemId) {
 async function togglePlay(itemId, statusAtual) {
   try {
     if (statusAtual === "tocando") {
-      // Pausar: volta para "preparado" (mídia fica carregada mas parada)
+      // Pausar: volta para "preparado"
       await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "preparado" });
       showToast("Pausado.", "info");
     } else {
       // Tocar: para todos, depois dá play neste
       await _pararTodosExceto(itemId);
       await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
-      showToast("Reproduzindo!", "success");
+
+      // Abre o projetor automaticamente se estiver fechado
+      if (!_janelaProjecao || _janelaProjecao.closed) {
+        // Aguarda 2 segundos antes de tocar (tempo para a janela carregar)
+        setTimeout(() => {
+          abrirProjecao();
+        }, 0);
+        showToast("Abrindo projetor e reproduzindo em 2 segundos…", "success");
+      } else {
+        showToast("Reproduzindo!", "success");
+      }
     }
   } catch (e) {
     console.error(e);
@@ -332,50 +342,70 @@ async function adicionarYoutube() {
 }
 
 // ---------------------------------------------------------------------------
-// Adicionar áudio ou vídeo por link direto (Google Drive, Dropbox, GitHub…)
+// Gerenciamento da janela do projetor
 // ---------------------------------------------------------------------------
-async function adicionarMidia() {
-  const titulo = document.getElementById("midia-titulo").value.trim();
-  const tipo   = document.getElementById("midia-tipo").value;      // 'audio' ou 'video'
-  const url    = document.getElementById("midia-url").value.trim();
 
-  if (!titulo) {
-    showToast("Preencha o título do item.", "error");
+/** Referência à janela do projetor (null se fechada) */
+let _janelaProjecao = null;
+
+/**
+ * Abre a tela de projeção em nova janela e entra em tela cheia.
+ * Se já estiver aberta, apenas traz para frente.
+ */
+function abrirProjecao() {
+  if (_janelaProjecao && !_janelaProjecao.closed) {
+    _janelaProjecao.focus();
+    showToast("Projetor já está aberto.", "info");
     return;
   }
-  if (!url || !url.startsWith("http")) {
-    showToast("Cole um link válido (deve começar com https://).", "error");
-    return;
-  }
+  _janelaProjecao = window.open(
+    "projecao.html",
+    "ProjecaoSonoplastia",
+    "toolbar=no,location=no,status=no,menubar=no"
+  );
+  // Atualiza botão do painel
+  _atualizarBotaoProjetor(true);
+  showToast("Projetor aberto!", "success");
 
-  try {
-    const snapshot  = await getDocs(roteiroQuery);
-    const proxOrdem = snapshot.size;
-
-    await addDoc(collection(db, COLECAO_ROTEIRO), {
-      titulo,
-      tipo,
-      url,
-      status: "parado",
-      ordem:  proxOrdem,
-      criadoEm: serverTimestamp(),
-    });
-
-    // Limpa os campos após adicionar
-    document.getElementById("midia-titulo").value = "";
-    document.getElementById("midia-url").value    = "";
-    showToast(`"${titulo}" adicionado ao roteiro!`, "success");
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao adicionar item. Verifique o console.", "error");
-  }
+  // Detecta se a janela foi fechada manualmente
+  const checarFechamento = setInterval(() => {
+    if (_janelaProjecao && _janelaProjecao.closed) {
+      _janelaProjecao = null;
+      _atualizarBotaoProjetor(false);
+      clearInterval(checarFechamento);
+    }
+  }, 1000);
 }
 
-// ---------------------------------------------------------------------------
-// Abre a tela de projeção em nova janela
-// ---------------------------------------------------------------------------
-function abrirProjecao() {
-  window.open("projecao.html", "ProjecaoSonoplastia", "toolbar=no,location=no,status=no,menubar=no");
+/**
+ * Fecha a janela do projetor remotamente.
+ */
+function fecharProjecao() {
+  if (_janelaProjecao && !_janelaProjecao.closed) {
+    _janelaProjecao.close();
+    _janelaProjecao = null;
+  }
+  _atualizarBotaoProjetor(false);
+  showToast("Projetor fechado.", "info");
+}
+
+/**
+ * Atualiza o botão de projetor na topbar conforme estado.
+ */
+function _atualizarBotaoProjetor(aberto) {
+  const btn = document.getElementById("btn-projetor");
+  if (!btn) return;
+  if (aberto) {
+    btn.textContent = "✖ Fechar Projetor";
+    btn.onclick = fecharProjecao;
+    btn.classList.remove("btn-accent");
+    btn.classList.add("btn-danger");
+  } else {
+    btn.textContent = "📽️ Abrir Projetor";
+    btn.onclick = abrirProjecao;
+    btn.classList.remove("btn-danger");
+    btn.classList.add("btn-accent");
+  }
 }
 
 // =============================================================================
@@ -387,16 +417,59 @@ function abrirProjecao() {
 // =============================================================================
 
 function iniciarProjecao() {
-  let ytPlayer       = null;  // Instância da YouTube IFrame API
-  let ytReady        = false; // Flag: API carregada
-  let ytUrlAtual     = null;  // URL atual carregada no player
-  let itemAtualId    = null;  // ID do documento ativo
+  let ytPlayer       = null;
+  let ytReady        = false;
+  let ytUrlAtual     = null;
+  let itemAtualId    = null;
+
+  // -----------------------------------------------------------------------
+  // Entra em tela cheia automaticamente após 2 segundos
+  // (aguarda interação do usuário para o navegador permitir)
+  // -----------------------------------------------------------------------
+  const entrarTelaCheia = () => {
+    const el = document.documentElement;
+    if (el.requestFullscreen)            el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+  };
+
+  // Tenta entrar em tela cheia assim que a página carrega
+  // O navegador pode bloquear sem interação — tentamos ao primeiro clique também
+  setTimeout(entrarTelaCheia, 500);
+  document.addEventListener("click", entrarTelaCheia, { once: true });
+
+  // -----------------------------------------------------------------------
+  // Botão flutuante de fechar (some após 4s sem mover o mouse)
+  // -----------------------------------------------------------------------
+  const btnFechar = document.getElementById("btn-fechar-projecao");
+  let timerBtnFechar = null;
+
+  const mostrarBtnFechar = () => {
+    if (!btnFechar) return;
+    btnFechar.classList.add("visivel");
+    clearTimeout(timerBtnFechar);
+    timerBtnFechar = setTimeout(() => {
+      btnFechar.classList.remove("visivel");
+    }, 4000);
+  };
+
+  document.addEventListener("mousemove", mostrarBtnFechar);
+  document.addEventListener("touchstart", mostrarBtnFechar);
+
+  if (btnFechar) {
+    btnFechar.addEventListener("click", () => {
+      // Sai da tela cheia antes de fechar
+      if (document.exitFullscreen)            document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      window.close();
+    });
+  }
 
   // -----------------------------------------------------------------------
   // Carrega a YouTube IFrame API dinamicamente
   // -----------------------------------------------------------------------
-  const tag    = document.createElement("script");
-  tag.src      = "https://www.youtube.com/iframe_api";
+  const tag = document.createElement("script");
+  tag.src   = "https://www.youtube.com/iframe_api";
   document.head.appendChild(tag);
 
   // Callback global exigido pela API do YouTube
@@ -406,16 +479,22 @@ function iniciarProjecao() {
       height: "100%",
       playerVars: {
         autoplay:       1,
-        controls:       0,         // Sem controles visíveis na projeção
+        controls:       0,
         modestbranding: 1,
         rel:            0,
         iv_load_policy: 3,
         fs:             0,
-        enablejsapi:    1,         // Obrigatório para controle via JS
-        origin:         window.location.origin, // Corrige erro de postMessage
+        enablejsapi:    1,
+        origin:         window.location.origin,
       },
       events: {
         onReady: () => { ytReady = true; },
+        // Detecta fim do vídeo
+        onStateChange: (event) => {
+          if (event.data === YT.PlayerState.ENDED) {
+            _aoTerminarVideo();
+          }
+        },
       },
     });
   };
@@ -424,7 +503,6 @@ function iniciarProjecao() {
   // Escuta o Firestore em tempo real
   // -----------------------------------------------------------------------
   onSnapshot(roteiroQuery, (snapshot) => {
-    // Procura o item que está "tocando" ou "preparado"
     let itemAtivo = null;
     snapshot.forEach((d) => {
       const data = d.data();
@@ -434,19 +512,15 @@ function iniciarProjecao() {
     });
 
     if (!itemAtivo) {
-      // Nenhum item ativo: tela preta
       _limparTela(ytPlayer, ytReady);
       itemAtualId = null;
       return;
     }
 
     const { id, tipo, url, status } = itemAtivo;
-
-    // Verifica se mudou o item (não apenas o status)
     const mudouItem = id !== itemAtualId;
     itemAtualId = id;
 
-    // Atualiza a tela conforme o tipo
     if (tipo === "youtube") {
       _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual,
         setYtUrl: (u) => { ytUrlAtual = u; } });
@@ -456,6 +530,25 @@ function iniciarProjecao() {
       _controlarVideo({ url, status, mudouItem });
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Chamado quando o vídeo do YouTube termina — volta para tela preta
+// ---------------------------------------------------------------------------
+async function _aoTerminarVideo() {
+  try {
+    // Para todos os itens → tela preta automaticamente
+    const snapshot = await getDocs(roteiroQuery);
+    const batch    = writeBatch(db);
+    snapshot.forEach((d) => {
+      if (d.data().status !== "parado") {
+        batch.update(doc(db, COLECAO_ROTEIRO, d.id), { status: "parado" });
+      }
+    });
+    await batch.commit();
+  } catch (e) {
+    console.error("Erro ao parar após fim do vídeo:", e);
+  }
 }
 
 // ---------------------------------------------------------------------------

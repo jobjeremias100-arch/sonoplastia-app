@@ -675,7 +675,7 @@
 
       <div class="topbar-actions">
         <!-- Abre a tela de projeção em nova janela -->
-        <button class="btn btn-accent" onclick="abrirProjecao()">
+        <button class="btn btn-accent" id="btn-projetor" onclick="abrirProjecao()">
           📽️ &nbsp;Abrir Projetor
         </button>
       </div>
@@ -723,50 +723,6 @@
             <button class="btn btn-danger btn-sm" id="btn-parar-tudo" onclick="pararTudo()">
               ⏹ &nbsp;Parar Tudo / Tela Preta
             </button>
-          </div>
-        </div>
-
-        <!-- Adicionar Áudio ou Vídeo por link -->
-        <div class="side-section">
-          <div class="side-section-title">🎵 &nbsp;Adicionar Áudio / Vídeo</div>
-
-          <div class="form-group">
-            <label class="form-label">Título do item</label>
-            <input class="form-input" type="text" id="midia-titulo" placeholder="Ex: Música de Entrada" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Tipo</label>
-            <select class="form-select" id="midia-tipo">
-              <option value="audio">♪ Áudio</option>
-              <option value="video">◼ Vídeo</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Link direto do arquivo</label>
-            <input class="form-input" type="url" id="midia-url" placeholder="https://drive.google.com/..." />
-          </div>
-
-          <button class="btn btn-green btn-sm" style="width:100%; justify-content:center; margin-bottom:12px;" onclick="adicionarMidia()">
-            ＋ &nbsp;Adicionar ao Roteiro
-          </button>
-
-          <!-- Dica de como gerar o link -->
-          <div class="link-dica">
-            <div class="link-dica-titulo">💡 Como gerar o link</div>
-            <div class="link-dica-item">
-              <span>☁️</span>
-              <span><strong style="color:var(--text-primary)">Google Drive:</strong> Clique direito no arquivo → Compartilhar → "Qualquer pessoa com o link" → Copiar</span>
-            </div>
-            <div class="link-dica-item">
-              <span>📦</span>
-              <span><strong style="color:var(--text-primary)">Dropbox:</strong> Compartilhar → copiar link e trocar <code style="color:var(--accent)">?dl=0</code> por <code style="color:var(--accent)">?raw=1</code></span>
-            </div>
-            <div class="link-dica-item">
-              <span>🐙</span>
-              <span><strong style="color:var(--text-primary)">GitHub:</strong> Abra o arquivo no repositório → clique em "Raw" → copie a URL</span>
-            </div>
           </div>
         </div>
 
