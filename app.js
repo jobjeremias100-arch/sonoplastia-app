@@ -49,16 +49,14 @@ if (isProjecao)  iniciarProjecao();
 // ---------------------------------------------------------------------------
 let _modoAtual = "estendida";
 
-// Referência ao documento de config
-const DOC_CONFIG = doc(db, "config", "app");
-
 function iniciarOperador() {
   window.abrirProjecao    = abrirProjecao;
   window.pararTudo        = pararTudo;
   window.adicionarYoutube = adicionarYoutube;
 
   // Escuta o modo de operação em tempo real
-  onSnapshot(DOC_CONFIG, (snap) => {
+  const docConfig = doc(db, "config", "app");
+  onSnapshot(docConfig, (snap) => {
     _modoAtual = snap.exists() ? (snap.data().modo || "estendida") : "estendida";
     _atualizarUIpelomodo(_modoAtual);
   });
