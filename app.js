@@ -1,10 +1,6 @@
 // =============================================================================
 // app.js — Lógica Central do Sonoplastia App
-//
-// Este módulo detecta em qual tela está rodando (Painel ou Projeção)
-// e inicializa o comportamento correto para cada uma.
-//
-// Dependências: firebase-config.js (Firestore + Storage)
+// VERSÃO ESTÁVEL — base para implementações futuras
 // =============================================================================
 
 import { db } from "./firebase-config.js";
@@ -26,10 +22,8 @@ import {
 // CONSTANTES
 // =============================================================================
 
-/** Nome da coleção no Firestore */
 const COLECAO_ROTEIRO = "roteiro";
 
-/** Referência para a query ordenada */
 const roteiroQuery = query(
   collection(db, COLECAO_ROTEIRO),
   orderBy("ordem", "asc")
@@ -37,7 +31,6 @@ const roteiroQuery = query(
 
 // =============================================================================
 // DETECÇÃO DE PÁGINA
-// Verifica se estamos no Painel (index.html) ou na Projeção (projecao.html)
 // =============================================================================
 
 const isOperador = document.getElementById("roteiro-list") !== null;
@@ -47,26 +40,48 @@ if (isOperador) iniciarOperador();
 if (isProjecao)  iniciarProjecao();
 
 // =============================================================================
-// =============================================================================
-//
 //   MÓDULO: PAINEL DO OPERADOR (index.html)
-//
 // =============================================================================
-// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Modo de operação atual (lido do Firestore — config/app)
+// Padrão: 'estendida' enquanto não carrega
+// ---------------------------------------------------------------------------
+let _modoAtual = "estendida";
+
+// Referência ao documento de config
+const DOC_CONFIG = doc(db, "config", "app");
 
 function iniciarOperador() {
-
-  // Expõe funções de ação para os botões HTML (onclick inline)
   window.abrirProjecao    = abrirProjecao;
-  window.fecharProjecao   = fecharProjecao;
   window.pararTudo        = pararTudo;
   window.adicionarYoutube = adicionarYoutube;
+
+  // Escuta o modo de operação em tempo real
+  onSnapshot(DOC_CONFIG, (snap) => {
+    _modoAtual = snap.exists() ? (snap.data().modo || "estendida") : "estendida";
+    _atualizarUIpelomodo(_modoAtual);
+  });
 
   _escutarRoteiro();
 }
 
+// Atualiza o botão "Abrir Projetor" conforme o modo
+function _atualizarUIpelomodo(modo) {
+  const btn = document.getElementById("btn-projetor");
+  if (!btn) return;
+
+  if (modo === "remoto") {
+    // No modo remoto o botão de projetor não faz sentido — esconde
+    btn.style.display = "none";
+  } else {
+    btn.style.display = "";
+    btn.textContent   = "📽️  Abrir Projetor";
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Escuta em tempo real o roteiro no Firestore e re-renderiza a lista
+// Escuta em tempo real o roteiro no Firestore
 // ---------------------------------------------------------------------------
 function _escutarRoteiro() {
   const listEl    = document.getElementById("roteiro-list");
@@ -78,7 +93,6 @@ function _escutarRoteiro() {
   onSnapshot(
     roteiroQuery,
     (snapshot) => {
-      // Conexão bem-sucedida
       statusDot.classList.add("online");
       statusLbl.textContent = "Firebase Conectado";
 
@@ -87,7 +101,6 @@ function _escutarRoteiro() {
 
       countEl.textContent = `${itens.length} item${itens.length !== 1 ? "s" : ""}`;
 
-      // Atualiza "Ao Vivo Agora"
       const tocando = itens.find((i) => i.status === "tocando");
       if (tocando) {
         nowPlayEl.classList.remove("now-playing-idle");
@@ -97,7 +110,6 @@ function _escutarRoteiro() {
         nowPlayEl.textContent = "Nenhum item ativo";
       }
 
-      // Renderiza a lista
       _renderizarLista(listEl, itens);
     },
     (error) => {
@@ -120,7 +132,7 @@ function _renderizarLista(container, itens) {
       <div class="empty-state">
         <div class="empty-icon">🎚️</div>
         <div class="empty-title">Roteiro Vazio</div>
-        <div class="empty-sub">Adicione itens usando o painel lateral (YouTube ou upload de arquivo).</div>
+        <div class="empty-sub">Adicione itens usando o painel lateral.</div>
       </div>`;
     return;
   }
@@ -131,7 +143,6 @@ function _renderizarLista(container, itens) {
     card.dataset.tipo = item.tipo;
     card.dataset.id   = item.id;
 
-    // Badge de tipo
     const badgeClass = {
       youtube: "badge-youtube",
       audio:   "badge-audio",
@@ -144,14 +155,12 @@ function _renderizarLista(container, itens) {
       video:   "◼ Vídeo",
     }[item.tipo] || item.tipo;
 
-    // Status legível
     const statusLabel = {
       parado:    "Parado",
       preparado: "Preparado na tela",
       tocando:   "Tocando ao vivo",
     }[item.status] || item.status;
 
-    // Botões — lógica de estado
     const isTocando   = item.status === "tocando";
     const isPreparado = item.status === "preparado";
 
@@ -195,7 +204,6 @@ function _renderizarLista(container, itens) {
     container.appendChild(card);
   });
 
-  // Expõe funções de controle para os botões inline do HTML gerado
   window.prepararItem = prepararItem;
   window.togglePlay   = togglePlay;
   window.removerItem  = removerItem;
@@ -205,10 +213,6 @@ function _renderizarLista(container, itens) {
 // Ações de controle de itens
 // ---------------------------------------------------------------------------
 
-/**
- * Marca um item como "preparado" (carregado na projeção mas não tocando).
- * Garante que apenas UM item pode estar preparado/tocando por vez.
- */
 async function prepararItem(itemId) {
   try {
     await _pararTodosExceto(itemId);
@@ -220,30 +224,34 @@ async function prepararItem(itemId) {
   }
 }
 
-/**
- * Alterna entre Play e Pause de um item.
- * Se outro item estava tocando, ele é parado primeiro.
- */
 async function togglePlay(itemId, statusAtual) {
   try {
     if (statusAtual === "tocando") {
-      // Pausar: volta para "preparado"
+      // Pausar — igual em todos os modos
       await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "preparado" });
       showToast("Pausado.", "info");
+
     } else {
-      // Tocar: para todos, depois dá play neste
+      // Play — comportamento depende do modo
       await _pararTodosExceto(itemId);
       await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
 
-      // Abre o projetor automaticamente se estiver fechado
-      if (!_janelaProjecao || _janelaProjecao.closed) {
-        // Aguarda 2 segundos antes de tocar (tempo para a janela carregar)
-        setTimeout(() => {
+      if (_modoAtual === "remoto") {
+        // Modo Remoto: só envia o comando, não abre janela nenhuma
+        showToast("▶ Reproduzindo! (Modo Remoto)", "success");
+
+      } else if (_modoAtual === "duplicada") {
+        // Modo Duplicada: abre a projeção automaticamente se não estiver aberta
+        if (!_janelaProjecao || _janelaProjecao.closed) {
           abrirProjecao();
-        }, 0);
-        showToast("Abrindo projetor e reproduzindo em 2 segundos…", "success");
+          showToast("▶ Abrindo projetor…", "success");
+        } else {
+          showToast("▶ Reproduzindo!", "success");
+        }
+
       } else {
-        showToast("Reproduzindo!", "success");
+        // Modo Estendida: só envia o comando (operador abre manualmente)
+        showToast("▶ Reproduzindo!", "success");
       }
     }
   } catch (e) {
@@ -252,9 +260,6 @@ async function togglePlay(itemId, statusAtual) {
   }
 }
 
-/**
- * Remove um item do roteiro.
- */
 async function removerItem(itemId) {
   if (!confirm("Remover este item do roteiro?")) return;
   try {
@@ -267,9 +272,6 @@ async function removerItem(itemId) {
   }
 }
 
-/**
- * Para todos os itens (coloca status "parado") — Tela Preta.
- */
 async function pararTudo() {
   try {
     const snapshot = await getDocs(roteiroQuery);
@@ -287,9 +289,6 @@ async function pararTudo() {
   }
 }
 
-/**
- * Para todos os itens EXCETO o informado (batch update).
- */
 async function _pararTodosExceto(exceptId) {
   const snapshot = await getDocs(roteiroQuery);
   const batch    = writeBatch(db);
@@ -302,7 +301,7 @@ async function _pararTodosExceto(exceptId) {
 }
 
 // ---------------------------------------------------------------------------
-// Adicionar item do YouTube manualmente
+// Adicionar item do YouTube
 // ---------------------------------------------------------------------------
 async function adicionarYoutube() {
   const titulo = document.getElementById("yt-titulo").value.trim();
@@ -319,16 +318,15 @@ async function adicionarYoutube() {
   }
 
   try {
-    // Descobre o próximo número de ordem
-    const snapshot = await getDocs(roteiroQuery);
+    const snapshot  = await getDocs(roteiroQuery);
     const proxOrdem = snapshot.size;
 
     await addDoc(collection(db, COLECAO_ROTEIRO), {
       titulo,
-      tipo:   "youtube",
+      tipo:     "youtube",
       url,
-      status: "parado",
-      ordem:  proxOrdem,
+      status:   "parado",
+      ordem:    proxOrdem,
       criadoEm: serverTimestamp(),
     });
 
@@ -341,21 +339,12 @@ async function adicionarYoutube() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Gerenciamento da janela do projetor
-// ---------------------------------------------------------------------------
-
-/** Referência à janela do projetor (null se fechada) */
+// Referência à janela do projetor
 let _janelaProjecao = null;
 
-/**
- * Abre a tela de projeção em nova janela e entra em tela cheia.
- * Se já estiver aberta, apenas traz para frente.
- */
 function abrirProjecao() {
   if (_janelaProjecao && !_janelaProjecao.closed) {
     _janelaProjecao.focus();
-    showToast("Projetor já está aberto.", "info");
     return;
   }
   _janelaProjecao = window.open(
@@ -363,116 +352,22 @@ function abrirProjecao() {
     "ProjecaoSonoplastia",
     "toolbar=no,location=no,status=no,menubar=no"
   );
-  // Atualiza botão do painel
-  _atualizarBotaoProjetor(true);
-  showToast("Projetor aberto!", "success");
-
-  // Detecta se a janela foi fechada manualmente
-  const checarFechamento = setInterval(() => {
-    if (_janelaProjecao && _janelaProjecao.closed) {
-      _janelaProjecao = null;
-      _atualizarBotaoProjetor(false);
-      clearInterval(checarFechamento);
-    }
-  }, 1000);
-}
-
-/**
- * Fecha a janela do projetor remotamente.
- */
-function fecharProjecao() {
-  if (_janelaProjecao && !_janelaProjecao.closed) {
-    _janelaProjecao.close();
-    _janelaProjecao = null;
-  }
-  _atualizarBotaoProjetor(false);
-  showToast("Projetor fechado.", "info");
-}
-
-/**
- * Atualiza o botão de projetor na topbar conforme estado.
- */
-function _atualizarBotaoProjetor(aberto) {
-  const btn = document.getElementById("btn-projetor");
-  if (!btn) return;
-  if (aberto) {
-    btn.textContent = "✖ Fechar Projetor";
-    btn.onclick = fecharProjecao;
-    btn.classList.remove("btn-accent");
-    btn.classList.add("btn-danger");
-  } else {
-    btn.textContent = "📽️ Abrir Projetor";
-    btn.onclick = abrirProjecao;
-    btn.classList.remove("btn-danger");
-    btn.classList.add("btn-accent");
-  }
 }
 
 // =============================================================================
-// =============================================================================
-//
 //   MÓDULO: TELA DE PROJEÇÃO (projecao.html)
-//
-// =============================================================================
 // =============================================================================
 
 function iniciarProjecao() {
-  let ytPlayer       = null;
-  let ytReady        = false;
-  let ytUrlAtual     = null;
-  let itemAtualId    = null;
+  let ytPlayer    = null;
+  let ytReady     = false;
+  let ytUrlAtual  = null;
+  let itemAtualId = null;
 
-  // -----------------------------------------------------------------------
-  // Entra em tela cheia automaticamente após 2 segundos
-  // (aguarda interação do usuário para o navegador permitir)
-  // -----------------------------------------------------------------------
-  const entrarTelaCheia = () => {
-    const el = document.documentElement;
-    if (el.requestFullscreen)            el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
-  };
-
-  // Tenta entrar em tela cheia assim que a página carrega
-  // O navegador pode bloquear sem interação — tentamos ao primeiro clique também
-  setTimeout(entrarTelaCheia, 500);
-  document.addEventListener("click", entrarTelaCheia, { once: true });
-
-  // -----------------------------------------------------------------------
-  // Botão flutuante de fechar (some após 4s sem mover o mouse)
-  // -----------------------------------------------------------------------
-  const btnFechar = document.getElementById("btn-fechar-projecao");
-  let timerBtnFechar = null;
-
-  const mostrarBtnFechar = () => {
-    if (!btnFechar) return;
-    btnFechar.classList.add("visivel");
-    clearTimeout(timerBtnFechar);
-    timerBtnFechar = setTimeout(() => {
-      btnFechar.classList.remove("visivel");
-    }, 4000);
-  };
-
-  document.addEventListener("mousemove", mostrarBtnFechar);
-  document.addEventListener("touchstart", mostrarBtnFechar);
-
-  if (btnFechar) {
-    btnFechar.addEventListener("click", () => {
-      // Sai da tela cheia antes de fechar
-      if (document.exitFullscreen)            document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      window.close();
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // Carrega a YouTube IFrame API dinamicamente
-  // -----------------------------------------------------------------------
   const tag = document.createElement("script");
   tag.src   = "https://www.youtube.com/iframe_api";
   document.head.appendChild(tag);
 
-  // Callback global exigido pela API do YouTube
   window.onYouTubeIframeAPIReady = () => {
     ytPlayer = new YT.Player("youtube-player", {
       width:  "100%",
@@ -489,19 +384,10 @@ function iniciarProjecao() {
       },
       events: {
         onReady: () => { ytReady = true; },
-        // Detecta fim do vídeo
-        onStateChange: (event) => {
-          if (event.data === YT.PlayerState.ENDED) {
-            _aoTerminarVideo();
-          }
-        },
       },
     });
   };
 
-  // -----------------------------------------------------------------------
-  // Escuta o Firestore em tempo real
-  // -----------------------------------------------------------------------
   onSnapshot(roteiroQuery, (snapshot) => {
     let itemAtivo = null;
     snapshot.forEach((d) => {
@@ -533,25 +419,6 @@ function iniciarProjecao() {
 }
 
 // ---------------------------------------------------------------------------
-// Chamado quando o vídeo do YouTube termina — volta para tela preta
-// ---------------------------------------------------------------------------
-async function _aoTerminarVideo() {
-  try {
-    // Para todos os itens → tela preta automaticamente
-    const snapshot = await getDocs(roteiroQuery);
-    const batch    = writeBatch(db);
-    snapshot.forEach((d) => {
-      if (d.data().status !== "parado") {
-        batch.update(doc(db, COLECAO_ROTEIRO, d.id), { status: "parado" });
-      }
-    });
-    await batch.commit();
-  } catch (e) {
-    console.error("Erro ao parar após fim do vídeo:", e);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Controle YouTube na Projeção
 // ---------------------------------------------------------------------------
 function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual, setYtUrl }) {
@@ -560,18 +427,14 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtu
   const videoId = _extrairVideoId(url);
   if (!videoId) return;
 
-  // Aguarda a API estar pronta
   const tentarControle = () => {
     if (!ytReady || !ytPlayer) { setTimeout(tentarControle, 300); return; }
 
     if (mudouItem || ytUrlAtual !== url) {
-      // Carrega novo vídeo
       setYtUrl(url);
       ytPlayer.loadVideoById(videoId);
-      if (status === "preparado") ytPlayer.pauseVideo(); // Carrega pausado
-      // "tocando" — loadVideoById já começa a tocar automaticamente
+      if (status === "preparado") ytPlayer.pauseVideo();
     } else {
-      // Mesmo vídeo, apenas alterna play/pause
       if (status === "tocando") {
         ytPlayer.playVideo();
       } else {
@@ -591,18 +454,15 @@ function _controlarAudio({ url, status, mudouItem }) {
   const audioEl   = document.getElementById("audio-player");
   const audioWrap = document.getElementById("audio-wrapper");
 
-  // Só recarrega se mudou o item ou a URL é diferente
   if (mudouItem || (url && audioEl.src !== url)) {
     audioEl.src = url;
     audioEl.load();
   }
 
   if (status === "tocando") {
-    // Tenta dar play; se o navegador bloquear, aguarda interação
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        // Bloqueio de autoplay: aguarda um clique na tela do projetor
         const desbloquear = () => {
           audioEl.play();
           document.removeEventListener("click", desbloquear);
@@ -647,45 +507,37 @@ function _controlarVideo({ url, status, mudouItem }) {
 }
 
 // ---------------------------------------------------------------------------
-// Exibe apenas o player correto, esconde os demais
+// Exibe apenas o player correto
 // ---------------------------------------------------------------------------
 function _mostrarPlayer(tipo) {
-  document.getElementById("youtube-wrapper").style.display = tipo === "youtube" ? "block"   : "none";
-  document.getElementById("audio-wrapper").style.display   = tipo === "audio"   ? "flex"    : "none";
-  document.getElementById("video-wrapper").style.display   = tipo === "video"   ? "block"   : "none";
+  document.getElementById("youtube-wrapper").style.display = tipo === "youtube" ? "block" : "none";
+  document.getElementById("audio-wrapper").style.display   = tipo === "audio"   ? "flex"  : "none";
+  document.getElementById("video-wrapper").style.display   = tipo === "video"   ? "block" : "none";
 }
 
 // ---------------------------------------------------------------------------
 // Limpa tudo — tela preta
 // ---------------------------------------------------------------------------
 function _limparTela(ytPlayer, ytReady) {
-  // Pausa e limpa o YouTube
   if (ytReady && ytPlayer) {
     try { ytPlayer.stopVideo(); } catch (_) {}
   }
 
-  // Para o áudio
   const audioEl = document.getElementById("audio-player");
   if (audioEl) { audioEl.pause(); audioEl.src = ""; }
 
-  // Para o vídeo
   const videoEl = document.getElementById("video-player");
   if (videoEl) { videoEl.pause(); videoEl.src = ""; }
 
-  // Esconde todos os wrappers
   document.getElementById("youtube-wrapper").style.display = "none";
   document.getElementById("audio-wrapper").style.display   = "none";
   document.getElementById("video-wrapper").style.display   = "none";
 }
 
 // =============================================================================
-// UTILITÁRIOS COMPARTILHADOS
+// UTILITÁRIOS
 // =============================================================================
 
-/**
- * Extrai o video ID de uma URL do YouTube.
- * Suporta: youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID
- */
 function _extrairVideoId(url) {
   try {
     const u = new URL(url);
@@ -696,9 +548,6 @@ function _extrairVideoId(url) {
   }
 }
 
-/**
- * Escapa caracteres HTML para evitar XSS na renderização de strings.
- */
 function _escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
@@ -706,7 +555,7 @@ function _escapeHtml(str) {
 }
 
 // ---------------------------------------------------------------------------
-// Sistema de Toast / Notificações (apenas no Painel do Operador)
+// Toast / Notificações
 // ---------------------------------------------------------------------------
 window.showToast = function (mensagem, tipo = "info") {
   const container = document.getElementById("toast-container");
@@ -714,15 +563,14 @@ window.showToast = function (mensagem, tipo = "info") {
 
   const icons = { success: "✅", error: "❌", info: "ℹ️" };
 
-  const toast    = document.createElement("div");
+  const toast     = document.createElement("div");
   toast.className = `toast ${tipo}`;
   toast.innerHTML = `<span>${icons[tipo] || "•"}</span><span>${mensagem}</span>`;
 
   container.appendChild(toast);
 
-  // Remove após 4 segundos
   setTimeout(() => {
-    toast.style.opacity = "0";
+    toast.style.opacity    = "0";
     toast.style.transition = "opacity 0.3s";
     setTimeout(() => toast.remove(), 320);
   }, 4000);
