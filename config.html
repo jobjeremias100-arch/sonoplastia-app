@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sonoplastia — Configurações</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-deep:    #09090f;
+      --bg-panel:   #111118;
+      --bg-card:    #16161f;
+      --border:     #2a2a3a;
+      --text:       #e8e8f0;
+      --text-muted: #6b6b88;
+      --accent:     #7c6af7;
+      --accent-dim: #3e3578;
+      --accent-glow:rgba(124,106,247,0.2);
+      --green:      #3ecf8e;
+      --green-dim:  #1a5c40;
+      --red:        #f04a5a;
+      --amber:      #f5a623;
+      --radius:     10px;
+      --font-mono:  'JetBrains Mono', monospace;
+      --font-display:'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .btn-voltar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+    .btn-voltar:hover { border-color: var(--accent); }
+
+    /* ── Conteúdo ── */
+    .content {
+      flex: 1;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      display: block;
+      width: 14px; height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Cards de modo ── */
+    .modo-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      position: relative;
+    }
+
+    .modo-card:hover {
+      border-color: var(--accent);
+      background: #1a1a26;
+    }
+
+    /* Estado ativo */
+    .modo-card.ativo {
+      border-color: var(--green);
+      background: #0f1f18;
+      box-shadow: 0 0 0 1px var(--green-dim), inset 0 0 30px rgba(62,207,142,0.05);
+    }
+
+    .modo-icone {
+      font-size: 28px;
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modo-card.ativo .modo-icone {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+
+    .modo-info { flex: 1; }
+
+    .modo-nome {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .modo-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Badge ATIVO */
+    .modo-badge {
+      display: none;
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .modo-card.ativo .modo-badge { display: block; }
+
+    /* ── Status do Firebase ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .status-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--text);
+      min-width: 220px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toast-in 0.25s ease;
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">⚙️</div>
+      <div>
+        <div class="brand-title">Sonoplastia</div>
+        <div class="brand-sub">Configurações</div>
+      </div>
+    </div>
+    <a href="index.html" class="btn-voltar">← Voltar ao Painel</a>
+  </header>
+
+  <!-- Conteúdo -->
+  <div class="content">
+
+    <!-- Status Firebase -->
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Conectando ao Firebase…</span>
+    </div>
+
+    <!-- Seção: Modo de Operação -->
+    <div>
+      <div class="section-title">🎛️ Modo de Operação</div>
+
+      <!-- Modo 1: Controle Remoto -->
+      <div class="modo-card" id="modo-remoto" onclick="selecionarModo('remoto')">
+        <div class="modo-icone">📱</div>
+        <div class="modo-info">
+          <div class="modo-nome">Controle Remoto</div>
+          <div class="modo-desc">
+            O celular controla o app via internet.<br>
+            O computador fica fixo com a tela de projeção aberta.<br>
+            <strong style="color:#e8e8f0">Clicar em Play não abre nenhuma janela</strong> — só envia o comando.
+          </div>
+        </div>
+        <span class="modo-badge">ATIVO</span>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <!-- Modo 2: Tela Estendida -->
+      <div class="modo-card" id="modo-estendida" onclick="selecionarModo('estendida')">
+        <div class="modo-icone">🖥️</div>
+        <div class="modo-info">
+          <div class="modo-nome">Tela Estendida</div>
+          <div class="modo-desc">
+            Computador com 2 monitores (ou HDMI/VGA).<br>
+            Painel em um monitor, projeção no outro.<br>
+            <strong style="color:#e8e8f0">Botão "Abrir Projetor" abre manualmente</strong> para arrastar ao segundo monitor.
+          </div>
+        </div>
+        <span class="modo-badge">ATIVO</span>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <!-- Modo 3: Tela Duplicada -->
+      <div class="modo-card" id="modo-duplicada" onclick="selecionarModo('duplicada')">
+        <div class="modo-icone">📽️</div>
+        <div class="modo-info">
+          <div class="modo-nome">Tela Duplicada</div>
+          <div class="modo-desc">
+            Computador conectado direto ao projetor.<br>
+            <strong style="color:#e8e8f0">Ao clicar em Play</strong>, a tela de projeção abre automaticamente em tela cheia.<br>
+            Quando o vídeo termina, a janela fecha e o computador fica livre.
+          </div>
+        </div>
+        <span class="modo-badge">ATIVO</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script type="module">
+    import { db } from "./firebase-config.js";
+    import {
+      doc,
+      getDoc,
+      setDoc,
+      onSnapshot,
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const DOC_CONFIG = doc(db, "config", "app");
+
+    // ── Indicador de conexão ──
+    const statusDot   = document.getElementById("status-dot");
+    const statusLabel = document.getElementById("status-label");
+
+    // ── Escuta config em tempo real ──
+    onSnapshot(DOC_CONFIG, (snap) => {
+      statusDot.classList.add("online");
+      statusLabel.textContent = "Firebase Conectado";
+
+      const modo = snap.exists() ? snap.data().modo : "estendida";
+      _destacarModo(modo);
+    }, () => {
+      statusDot.classList.remove("online");
+      statusLabel.textContent = "Erro de conexão";
+    });
+
+    // ── Selecionar e salvar modo ──
+    window.selecionarModo = async (modo) => {
+      try {
+        await setDoc(DOC_CONFIG, { modo }, { merge: true });
+        _destacarModo(modo);
+        const nomes = {
+          remoto:    "Controle Remoto",
+          estendida: "Tela Estendida",
+          duplicada: "Tela Duplicada",
+        };
+        showToast(`Modo "${nomes[modo]}" ativado!`, "success");
+      } catch (e) {
+        console.error(e);
+        showToast("Erro ao salvar configuração.", "error");
+      }
+    };
+
+    // ── Destaca o card ativo ──
+    function _destacarModo(modo) {
+      document.querySelectorAll(".modo-card").forEach(c => c.classList.remove("ativo"));
+      const card = document.getElementById(`modo-${modo}`);
+      if (card) card.classList.add("ativo");
+    }
+
+    // ── Toast ──
+    window.showToast = (msg, tipo = "info") => {
+      const container = document.getElementById("toast-container");
+      const icons = { success: "✅", error: "❌", info: "ℹ️" };
+      const toast = document.createElement("div");
+      toast.className = `toast ${tipo}`;
+      toast.innerHTML = `<span>${icons[tipo]}</span><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.3s";
+        setTimeout(() => toast.remove(), 320);
+      }, 3500);
+    };
+  </script>
+
+</body>
+</html>
