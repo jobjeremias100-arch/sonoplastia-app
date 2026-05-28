@@ -643,7 +643,71 @@
       to   { opacity: 1; transform: translateX(0); }
     }
 
-    /* Responsividade básica */
+    /* Slider de volume */
+    .volume-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .volume-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .volume-valor {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg-card);
+      box-shadow: 0 0 8px var(--accent-glow);
+      transition: transform 0.1s;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .volume-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg-card);
+    }
+
+    .volume-icons {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
     @media (max-width: 860px) {
       .content { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
       .panel-side { border-left: none; border-top: 1px solid var(--border); }
@@ -725,6 +789,28 @@
             <button class="btn btn-danger btn-sm" id="btn-parar-tudo" onclick="pararTudo()">
               ⏹ &nbsp;Parar Tudo / Tela Preta
             </button>
+          </div>
+        </div>
+
+        <!-- Controle de Volume -->
+        <div class="side-section">
+          <div class="side-section-title">🔊 &nbsp;Volume do Projetor</div>
+          <div class="volume-wrap">
+            <div class="volume-top">
+              <span style="font-size:11px; color:var(--text-muted);">Nível de volume</span>
+              <span class="volume-valor" id="volume-valor">100%</span>
+            </div>
+            <input
+              class="volume-slider"
+              type="range"
+              id="volume-slider"
+              min="0" max="100" value="100"
+              oninput="atualizarVolume(this.value)"
+            />
+            <div class="volume-icons">
+              <span>🔇 Mudo</span>
+              <span>🔊 Máximo</span>
+            </div>
           </div>
         </div>
 

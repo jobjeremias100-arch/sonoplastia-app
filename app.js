@@ -12,6 +12,7 @@ import {
   onSnapshot,
   addDoc,
   updateDoc,
+  setDoc,
   doc,
   serverTimestamp,
   writeBatch,
@@ -53,12 +54,24 @@ function iniciarOperador() {
   window.abrirProjecao    = abrirProjecao;
   window.pararTudo        = pararTudo;
   window.adicionarYoutube = adicionarYoutube;
+  window.atualizarVolume  = atualizarVolume;
 
   // Escuta o modo de operação em tempo real
   const docConfig = doc(db, "config", "app");
   onSnapshot(docConfig, (snap) => {
-    _modoAtual = snap.exists() ? (snap.data().modo || "estendida") : "estendida";
+    if (!snap.exists()) return;
+    const data = snap.data();
+
+    // Atualiza modo
+    _modoAtual = data.modo || "estendida";
     _atualizarUIpelomodo(_modoAtual);
+
+    // Sincroniza o slider com o volume salvo
+    const vol = data.volume !== undefined ? data.volume : 100;
+    const slider = document.getElementById("volume-slider");
+    const label  = document.getElementById("volume-valor");
+    if (slider) slider.value = vol;
+    if (label)  label.textContent = `${vol}%`;
   });
 
   _escutarRoteiro();
@@ -295,7 +308,28 @@ async function pararTudo() {
   }
 }
 
-async function _pararTodosExceto(exceptId) {
+// ---------------------------------------------------------------------------
+// Controle de volume — salva no Firestore, projeção escuta e aplica
+// ---------------------------------------------------------------------------
+async function atualizarVolume(valor) {
+  // Atualiza o label visualmente em tempo real
+  const label = document.getElementById("volume-valor");
+  if (label) label.textContent = `${valor}%`;
+
+  // Salva no Firestore (debounce de 300ms para não salvar a cada pixel)
+  clearTimeout(atualizarVolume._timer);
+  atualizarVolume._timer = setTimeout(async () => {
+    try {
+      await setDoc(
+        doc(db, "config", "app"),
+        { volume: parseInt(valor) },
+        { merge: true }
+      );
+    } catch (e) {
+      console.error("Erro ao salvar volume:", e);
+    }
+  }, 300);
+}
   const snapshot = await getDocs(roteiroQuery);
   const batch    = writeBatch(db);
   snapshot.forEach((d) => {
@@ -394,6 +428,31 @@ function iniciarProjecao() {
     });
   };
 
+  // -----------------------------------------------------------------------
+  // Escuta o volume do Firestore e aplica nos players
+  // -----------------------------------------------------------------------
+  const docConfigProjecao = doc(db, "config", "app");
+  onSnapshot(docConfigProjecao, (snap) => {
+    if (!snap.exists()) return;
+    const vol = snap.data().volume !== undefined ? snap.data().volume / 100 : 1;
+
+    // Aplica no YouTube
+    if (ytReady && ytPlayer && ytPlayer.setVolume) {
+      ytPlayer.setVolume(vol * 100);
+    }
+
+    // Aplica no áudio
+    const audioEl = document.getElementById("audio-player");
+    if (audioEl) audioEl.volume = vol;
+
+    // Aplica no vídeo
+    const videoEl = document.getElementById("video-player");
+    if (videoEl) videoEl.volume = vol;
+  });
+
+  // -----------------------------------------------------------------------
+  // Escuta o roteiro no Firestore
+  // -----------------------------------------------------------------------
   onSnapshot(roteiroQuery, (snapshot) => {
     let itemAtivo = null;
     snapshot.forEach((d) => {
