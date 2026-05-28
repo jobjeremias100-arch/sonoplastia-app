@@ -117,38 +117,6 @@
       pointer-events: none;
     }
 
-    /* Botão de fechar — flutuante, discreto, some automaticamente */
-    #btn-fechar-projecao {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-      background: rgba(240, 74, 90, 0.15);
-      border: 1px solid #f04a5a;
-      color: #f04a5a;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      /* Invisível por padrão */
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    /* Aparece ao mover o mouse */
-    #btn-fechar-projecao.visivel {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    #btn-fechar-projecao:hover {
-      background: rgba(240, 74, 90, 0.4);
-    }
     #video-player::-webkit-media-controls          { display: none !important; }
     #video-player::-webkit-media-controls-enclosure { display: none !important; }
     #video-player::-webkit-media-controls-panel    { display: none !important; }
@@ -158,9 +126,6 @@
   </style>
 </head>
 <body>
-
-  <!-- Botão de fechar — aparece ao mover o mouse, some após 4s -->
-  <button id="btn-fechar-projecao">✖ &nbsp;Fechar Projetor</button>
 
   <div id="projecao-container">
 
@@ -188,5 +153,24 @@
   <!-- Script de escuta do Firebase e controle dos players -->
   <script type="module" src="app.js"></script>
 
-</body>
+  <!-- Tela cheia automática ao abrir -->
+  <script>
+    // Tenta entrar em tela cheia assim que a página carrega
+    // O clique que abriu a janela conta como interação do usuário
+    function entrarTelaCheia() {
+      const el = document.documentElement;
+      if      (el.requestFullscreen)            el.requestFullscreen();
+      else if (el.webkitRequestFullscreen)      el.webkitRequestFullscreen();
+      else if (el.mozRequestFullScreen)         el.mozRequestFullScreen();
+      else if (el.msRequestFullscreen)          el.msRequestFullscreen();
+    }
+
+    // Tenta imediatamente ao carregar
+    window.addEventListener("load", () => {
+      setTimeout(entrarTelaCheia, 300);
+    });
+
+    // Fallback: se o navegador bloquear, tenta no primeiro clique
+    document.addEventListener("click", entrarTelaCheia, { once: true });
+  </script>
 </html>
