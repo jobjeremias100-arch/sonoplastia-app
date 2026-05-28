@@ -37,6 +37,10 @@ const roteiroQuery = query(
 const isOperador = document.getElementById("roteiro-list") !== null;
 const isProjecao = document.getElementById("projecao-container") !== null;
 
+// Expõe atualizarVolume globalmente para o slider HTML poder chamar
+// (precisa estar antes do iniciarOperador)
+window.atualizarVolume = atualizarVolume;
+
 if (isOperador) iniciarOperador();
 if (isProjecao)  iniciarProjecao();
 
@@ -330,6 +334,8 @@ async function atualizarVolume(valor) {
     }
   }, 300);
 }
+
+async function _pararTodosExceto(exceptId) {
   const snapshot = await getDocs(roteiroQuery);
   const batch    = writeBatch(db);
   snapshot.forEach((d) => {
