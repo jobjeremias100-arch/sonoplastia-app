@@ -232,23 +232,31 @@ async function togglePlay(itemId, statusAtual) {
     } else {
       // Play — comportamento depende do modo
       await _pararTodosExceto(itemId);
-      await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
 
       if (_modoAtual === "remoto") {
         // Modo Remoto: só envia o comando, não abre janela nenhuma
+        await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
         showToast("▶ Reproduzindo! (Modo Remoto)", "success");
 
       } else if (_modoAtual === "duplicada") {
-        // Modo Duplicada: abre a projeção automaticamente se não estiver aberta
+        // Modo Duplicada: abre a janela PRIMEIRO, aguarda carregar, depois dá play
         if (!_janelaProjecao || _janelaProjecao.closed) {
+          // Abre a janela
           abrirProjecao();
           showToast("▶ Abrindo projetor…", "success");
+          // Aguarda 3 segundos para a janela e o YouTube carregarem
+          setTimeout(async () => {
+            await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
+          }, 3000);
         } else {
+          // Janela já aberta — dá play direto
+          await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
           showToast("▶ Reproduzindo!", "success");
         }
 
       } else {
-        // Modo Estendida: só envia o comando (operador abre manualmente)
+        // Modo Estendida: só envia o comando
+        await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), { status: "tocando" });
         showToast("▶ Reproduzindo!", "success");
       }
     }
