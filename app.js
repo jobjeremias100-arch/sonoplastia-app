@@ -331,22 +331,10 @@ async function colarLink() {
 }
 
 // ---------------------------------------------------------------------------
-// Abre o YouTube conforme o modo:
-// Remoto → app do YouTube (celular)
-// Estendida / Duplicada → navegador (PC)
+// Abre o YouTube no navegador (sem popup bloqueado)
 // ---------------------------------------------------------------------------
 function abrirYoutube() {
-  if (_modoAtual === "remoto") {
-    // Tenta abrir o app do YouTube instalado no celular
-    window.location.href = "youtube://";
-    // Fallback: se depois de 1s ainda estiver aqui, abre no navegador
-    setTimeout(() => {
-      window.open("https://www.youtube.com", "_blank");
-    }, 1000);
-  } else {
-    // PC — abre o YouTube no navegador em nova aba
-    window.open("https://www.youtube.com", "_blank");
-  }
+  window.location.href = "https://www.youtube.com";
 }
 
 // ---------------------------------------------------------------------------
