@@ -59,6 +59,8 @@ function iniciarOperador() {
   window.pararTudo        = pararTudo;
   window.adicionarYoutube = adicionarYoutube;
   window.atualizarVolume  = atualizarVolume;
+  window.colarLink        = colarLink;
+  window.abrirYoutube     = abrirYoutube;
 
   // Escuta o modo de operação em tempo real
   const docConfig = doc(db, "config", "app");
@@ -313,7 +315,40 @@ async function pararTudo() {
 }
 
 // ---------------------------------------------------------------------------
-// Controle de volume — salva no Firestore, projeção escuta e aplica
+// Cola o link da área de transferência no campo de URL do YouTube
+// ---------------------------------------------------------------------------
+async function colarLink() {
+  try {
+    const texto = await navigator.clipboard.readText();
+    const campo = document.getElementById("yt-url");
+    if (campo) {
+      campo.value = texto;
+      showToast("Link colado!", "success");
+    }
+  } catch (e) {
+    showToast("Permita o acesso à área de transferência.", "error");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Abre o YouTube conforme o modo:
+// Remoto → app do YouTube (celular)
+// Estendida / Duplicada → navegador (PC)
+// ---------------------------------------------------------------------------
+function abrirYoutube() {
+  if (_modoAtual === "remoto") {
+    // Tenta abrir o app do YouTube instalado no celular
+    window.location.href = "youtube://";
+    // Fallback: se depois de 1s ainda estiver aqui, abre no navegador
+    setTimeout(() => {
+      window.open("https://www.youtube.com", "_blank");
+    }, 1000);
+  } else {
+    // PC — abre o YouTube no navegador em nova aba
+    window.open("https://www.youtube.com", "_blank");
+  }
+}
+
 // ---------------------------------------------------------------------------
 async function atualizarVolume(valor) {
   // Atualiza o label visualmente em tempo real

@@ -792,7 +792,34 @@
           </div>
         </div>
 
-        <!-- Controle de Volume -->
+        <!-- Adicionar item YouTube manualmente -->
+        <div class="side-section">
+          <div class="side-section-title">🎬 &nbsp;Adicionar YouTube</div>
+
+          <div class="form-group">
+            <label class="form-label">Título</label>
+            <input class="form-input" type="text" id="yt-titulo" placeholder="Ex: Louvor de Abertura" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">URL do YouTube</label>
+            <div style="display:flex; gap:6px;">
+              <input class="form-input" type="url" id="yt-url" placeholder="https://youtu.be/..." style="flex:1;" />
+              <button class="btn btn-sm" onclick="colarLink()" title="Colar link" style="flex-shrink:0; padding: 8px 12px;">
+                📋
+              </button>
+              <button class="btn btn-sm btn-accent" onclick="abrirYoutube()" title="Abrir YouTube" style="flex-shrink:0; padding: 8px 12px;">
+                ▶
+              </button>
+            </div>
+          </div>
+
+          <button class="btn btn-accent btn-sm" style="width:100%; justify-content:center;" onclick="adicionarYoutube()">
+            ＋ &nbsp;Adicionar ao Roteiro
+          </button>
+        </div>
+
+        <!-- Controle de Volume — no final para evitar alteração acidental -->
         <div class="side-section">
           <div class="side-section-title">🔊 &nbsp;Volume do Projetor</div>
           <div class="volume-wrap">
@@ -812,25 +839,6 @@
               <span>🔊 Máximo</span>
             </div>
           </div>
-        </div>
-
-        <!-- Adicionar item YouTube manualmente -->
-        <div class="side-section">
-          <div class="side-section-title">🎬 &nbsp;Adicionar YouTube</div>
-
-          <div class="form-group">
-            <label class="form-label">Título</label>
-            <input class="form-input" type="text" id="yt-titulo" placeholder="Ex: Louvor de Abertura" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">URL do YouTube</label>
-            <input class="form-input" type="url" id="yt-url" placeholder="https://youtu.be/..." />
-          </div>
-
-          <button class="btn btn-accent btn-sm" style="width:100%; justify-content:center;" onclick="adicionarYoutube()">
-            ＋ &nbsp;Adicionar ao Roteiro
-          </button>
         </div>
 
       </aside>
