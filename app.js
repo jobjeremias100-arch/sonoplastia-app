@@ -334,7 +334,6 @@ async function togglePlay(itemId, statusAtual) {
 async function removerItem(itemId) {
   if (!confirm("Remover este item do roteiro?")) return;
   try {
-    const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     await deleteDoc(doc(db, COLECAO_ROTEIRO, itemId));
     showToast("Item removido.", "info");
   } catch (e) {
