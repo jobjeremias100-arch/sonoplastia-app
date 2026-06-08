@@ -13,6 +13,8 @@ import {
   addDoc,
   updateDoc,
   setDoc,
+  getDoc,
+  deleteDoc,
   doc,
   serverTimestamp,
   writeBatch,
@@ -23,7 +25,11 @@ import {
 // CONSTANTES
 // =============================================================================
 
-const COLECAO_ROTEIRO = "roteiro";
+const COLECAO_ROTEIRO   = "roteiro";
+const COLECAO_FAVORITOS = "favoritos";
+
+/** IDs dos itens favoritos — atualizado em tempo real */
+let _favoritosIds = new Set();
 
 const roteiroQuery = query(
   collection(db, COLECAO_ROTEIRO),
@@ -80,6 +86,17 @@ function iniciarOperador() {
     if (label)  label.textContent = `${vol}%`;
   });
 
+  // Escuta favoritos em tempo real para colorir as estrelas
+  onSnapshot(collection(db, COLECAO_FAVORITOS), (snap) => {
+    _favoritosIds = new Set();
+    snap.forEach((d) => _favoritosIds.add(d.id));
+    // Re-renderiza a lista para atualizar as estrelas
+    const listEl = document.getElementById("roteiro-list");
+    if (listEl && listEl._itensCache) {
+      _renderizarLista(listEl, listEl._itensCache);
+    }
+  });
+
   _escutarRoteiro();
 }
 
@@ -128,6 +145,7 @@ function _escutarRoteiro() {
       }
 
       _renderizarLista(listEl, itens);
+      listEl._itensCache = itens; // cache para re-renderização dos favoritos
     },
     (error) => {
       console.error("Firestore error:", error);
@@ -178,6 +196,7 @@ function _renderizarLista(container, itens) {
       tocando:   "Tocando ao vivo",
     }[item.status] || item.status;
 
+    const isFavorito  = _favoritosIds.has(item.id);
     const isTocando   = item.status === "tocando";
     const isPreparado = item.status === "preparado";
 
@@ -188,10 +207,10 @@ function _renderizarLista(container, itens) {
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <button
             class="btn btn-xs"
-            title="Salvar nos favoritos"
-            style="color:var(--amber); border-color:var(--amber); padding:2px 8px; font-size:12px;"
+            title="${isFavorito ? 'Remover dos favoritos' : 'Salvar nos favoritos'}"
+            style="color:${isFavorito ? 'var(--amber)' : 'var(--text-dim)'}; border-color:${isFavorito ? 'var(--amber)' : 'var(--border)'}; padding:2px 8px; font-size:12px;"
             onclick="salvarFavorito('${item.id}')"
-          >★</button>
+          >${isFavorito ? '★' : '☆'}</button>
           <div class="item-titulo">${_escapeHtml(item.titulo)}</div>
         </div>
         <div class="item-meta">
@@ -307,10 +326,34 @@ async function removerItem(itemId) {
 }
 
 // ---------------------------------------------------------------------------
-// Salvar nos favoritos — em breve
+// Salvar / Remover dos favoritos (toggle)
 // ---------------------------------------------------------------------------
 async function salvarFavorito(itemId) {
-  showToast("Em breve: favoritos! ⭐", "info");
+  try {
+    const favRef = doc(db, COLECAO_FAVORITOS, itemId);
+
+    if (_favoritosIds.has(itemId)) {
+      // Já é favorito → remove
+      await deleteDoc(favRef);
+      showToast("Removido dos favoritos.", "info");
+    } else {
+      // Não é favorito → busca os dados do item e salva
+      const itemSnap = await getDoc(doc(db, COLECAO_ROTEIRO, itemId));
+      if (!itemSnap.exists()) return;
+      const { titulo, tipo, url } = itemSnap.data();
+
+      await setDoc(favRef, {
+        titulo,
+        tipo,
+        url,
+        savedAt: serverTimestamp(),
+      });
+      showToast(`"${titulo}" salvo nos favoritos! ★`, "success");
+    }
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao atualizar favoritos.", "error");
+  }
 }
 
 async function pararTudo() {
