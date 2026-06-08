@@ -185,7 +185,15 @@ function _renderizarLista(container, itens) {
       <div class="item-ordem">${index + 1}</div>
 
       <div class="item-info">
-        <div class="item-titulo">${_escapeHtml(item.titulo)}</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <button
+            class="btn btn-xs"
+            title="Salvar nos favoritos"
+            style="color:var(--amber); border-color:var(--amber); padding:2px 8px; font-size:12px;"
+            onclick="salvarFavorito('${item.id}')"
+          >★</button>
+          <div class="item-titulo">${_escapeHtml(item.titulo)}</div>
+        </div>
         <div class="item-meta">
           <span class="item-badge ${badgeClass}">${badgeLabel}</span>
           <span class="item-status-text">${statusLabel}</span>
@@ -207,14 +215,6 @@ function _renderizarLista(container, itens) {
           onclick="togglePlay('${item.id}', '${item.status}')"
         >
           ${isTocando ? "⏸ Pausar" : "▶ Play"}
-        </button>
-
-        <button
-          class="btn btn-xs"
-          title="Salvar nos favoritos"
-          onclick="salvarFavorito('${item.id}')"
-        >
-          ⭐
         </button>
 
         <button
