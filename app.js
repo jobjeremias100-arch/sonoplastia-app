@@ -70,6 +70,7 @@ function iniciarOperador() {
   window.abrirYoutube           = abrirYoutube;
   window.toggleFavoritos        = toggleFavoritos;
   window.adicionarFavAoRoteiro  = adicionarFavAoRoteiro;
+  window.removerFavorito        = removerFavorito;
 
   // Escuta o modo de operação em tempo real
   const docConfig = doc(db, "config", "app");
@@ -367,6 +368,9 @@ function _renderizarFavoritos() {
       <button class="favorito-chip-add" onclick="adicionarFavAoRoteiro('${fav.id}')">
         + Roteiro
       </button>
+      <button class="favorito-chip-rem" onclick="removerFavorito('${fav.id}')" title="Remover dos favoritos">
+        ×
+      </button>
     </div>
   `).join("");
 }
@@ -469,6 +473,19 @@ async function colarLink() {
 // ---------------------------------------------------------------------------
 function abrirYoutube() {
   window.location.href = "https://www.youtube.com";
+}
+
+// ---------------------------------------------------------------------------
+// Remover favorito diretamente do painel
+// ---------------------------------------------------------------------------
+async function removerFavorito(favId) {
+  try {
+    await deleteDoc(doc(db, COLECAO_FAVORITOS, favId));
+    showToast("Removido dos favoritos.", "info");
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao remover favorito.", "error");
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -763,7 +763,7 @@
 
     .favoritos-lista {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 8px;
     }
 
@@ -803,6 +803,19 @@
       white-space: nowrap;
     }
     .favorito-chip-add:hover { background: var(--amber); color: #000; }
+
+    .favorito-chip-rem {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .favorito-chip-rem:hover { color: var(--red); }
 
     .favoritos-vazio {
       font-size: 12px;
