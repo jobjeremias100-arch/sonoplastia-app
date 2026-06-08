@@ -768,8 +768,9 @@
     }
 
     .favorito-chip {
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
       padding: 7px 14px;
       background: var(--bg-card);
@@ -778,11 +779,12 @@
       font-size: 12px;
       color: var(--text-primary);
       transition: border-color 0.15s;
+      width: 100%;
     }
     .favorito-chip:hover { border-color: var(--amber); }
 
     .favorito-chip-nome {
-      max-width: 160px;
+      flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
