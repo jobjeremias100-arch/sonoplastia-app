@@ -712,6 +712,121 @@
       .content { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
       .panel-side { border-left: none; border-top: 1px solid var(--border); }
     }
+
+    /* ── Painel flutuante de favoritos ── */
+    #favoritos-painel {
+      display: none;
+      position: absolute;
+      top: 65px; left: 0; right: 0;
+      background: var(--bg-panel);
+      border-bottom: 2px solid var(--amber);
+      z-index: 50;
+      padding: 16px 28px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: slide-down 0.2s ease;
+    }
+
+    #favoritos-painel.aberto { display: block; }
+
+    @keyframes slide-down {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .favoritos-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .favoritos-titulo {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .favoritos-fechar {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .favoritos-fechar:hover { color: var(--text-primary); }
+
+    .favoritos-lista {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .favorito-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: 12px;
+      color: var(--text-primary);
+      transition: border-color 0.15s;
+    }
+    .favorito-chip:hover { border-color: var(--amber); }
+
+    .favorito-chip-nome {
+      max-width: 160px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .favorito-chip-add {
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      border-radius: 99px;
+      padding: 2px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .favorito-chip-add:hover { background: var(--amber); color: #000; }
+
+    .favoritos-vazio {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Contador no botão favoritos */
+    .btn-fav-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .badge-count {
+      position: absolute;
+      top: -6px; right: -6px;
+      background: var(--amber);
+      color: #000;
+      font-size: 9px;
+      font-weight: 700;
+      border-radius: 99px;
+      padding: 1px 5px;
+      display: none;
+    }
+    .badge-count.visivel { display: block; }
   </style>
 </head>
 <body>
@@ -738,6 +853,12 @@
       </div>
 
       <div class="topbar-actions">
+        <div class="btn-fav-wrap">
+          <button class="btn" onclick="toggleFavoritos()" id="btn-favoritos">
+            ★ &nbsp;Favoritos
+          </button>
+          <span class="badge-count" id="favoritos-count"></span>
+        </div>
         <a href="config.html" class="btn" style="text-decoration:none;">
           ⚙️ &nbsp;Configurações
         </a>
@@ -746,6 +867,17 @@
         </button>
       </div>
     </header>
+
+    <!-- Painel flutuante de favoritos -->
+    <div id="favoritos-painel">
+      <div class="favoritos-header">
+        <span class="favoritos-titulo">★ &nbsp;Favoritos</span>
+        <button class="favoritos-fechar" onclick="toggleFavoritos()">×</button>
+      </div>
+      <div class="favoritos-lista" id="favoritos-lista">
+        <span class="favoritos-vazio">Nenhum favorito salvo ainda.</span>
+      </div>
+    </div>
 
     <!-- =====================================================
          CONTEÚDO PRINCIPAL

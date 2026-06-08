@@ -29,7 +29,8 @@ const COLECAO_ROTEIRO   = "roteiro";
 const COLECAO_FAVORITOS = "favoritos";
 
 /** IDs dos itens favoritos — atualizado em tempo real */
-let _favoritosIds = new Set();
+let _favoritosIds   = new Set();
+let _favoritosCache = [];
 
 const roteiroQuery = query(
   collection(db, COLECAO_ROTEIRO),
@@ -61,12 +62,14 @@ if (isProjecao)  iniciarProjecao();
 let _modoAtual = "estendida";
 
 function iniciarOperador() {
-  window.abrirProjecao    = abrirProjecao;
-  window.pararTudo        = pararTudo;
-  window.adicionarYoutube = adicionarYoutube;
-  window.atualizarVolume  = atualizarVolume;
-  window.colarLink        = colarLink;
-  window.abrirYoutube     = abrirYoutube;
+  window.abrirProjecao          = abrirProjecao;
+  window.pararTudo              = pararTudo;
+  window.adicionarYoutube       = adicionarYoutube;
+  window.atualizarVolume        = atualizarVolume;
+  window.colarLink              = colarLink;
+  window.abrirYoutube           = abrirYoutube;
+  window.toggleFavoritos        = toggleFavoritos;
+  window.adicionarFavAoRoteiro  = adicionarFavAoRoteiro;
 
   // Escuta o modo de operação em tempo real
   const docConfig = doc(db, "config", "app");
@@ -86,11 +89,26 @@ function iniciarOperador() {
     if (label)  label.textContent = `${vol}%`;
   });
 
-  // Escuta favoritos em tempo real para colorir as estrelas
+  // Escuta favoritos em tempo real para colorir estrelas e renderizar painel
   onSnapshot(collection(db, COLECAO_FAVORITOS), (snap) => {
     _favoritosIds = new Set();
-    snap.forEach((d) => _favoritosIds.add(d.id));
-    // Re-renderiza a lista para atualizar as estrelas
+    _favoritosCache = [];
+    snap.forEach((d) => {
+      _favoritosIds.add(d.id);
+      _favoritosCache.push({ id: d.id, ...d.data() });
+    });
+
+    // Atualiza contador no botão
+    const badge = document.getElementById("favoritos-count");
+    if (badge) {
+      badge.textContent = _favoritosCache.length;
+      badge.classList.toggle("visivel", _favoritosCache.length > 0);
+    }
+
+    // Re-renderiza painel de favoritos se estiver aberto
+    _renderizarFavoritos();
+
+    // Re-renderiza lista para atualizar estrelas
     const listEl = document.getElementById("roteiro-list");
     if (listEl && listEl._itensCache) {
       _renderizarLista(listEl, listEl._itensCache);
@@ -322,6 +340,64 @@ async function removerItem(itemId) {
   } catch (e) {
     console.error(e);
     showToast("Erro ao remover item.", "error");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Painel flutuante de favoritos
+// ---------------------------------------------------------------------------
+function toggleFavoritos() {
+  const painel = document.getElementById("favoritos-painel");
+  if (!painel) return;
+  painel.classList.toggle("aberto");
+  _renderizarFavoritos();
+}
+
+function _renderizarFavoritos() {
+  const lista = document.getElementById("favoritos-lista");
+  if (!lista) return;
+
+  if (_favoritosCache.length === 0) {
+    lista.innerHTML = `<span class="favoritos-vazio">Nenhum favorito salvo ainda. Clique em ☆ em um item do roteiro.</span>`;
+    return;
+  }
+
+  lista.innerHTML = _favoritosCache.map(fav => `
+    <div class="favorito-chip">
+      <span class="favorito-chip-nome">★ ${_escapeHtml(fav.titulo)}</span>
+      <button class="favorito-chip-add" onclick="adicionarFavAoRoteiro('${fav.id}')">
+        + Roteiro
+      </button>
+    </div>
+  `).join("");
+}
+
+async function adicionarFavAoRoteiro(favId) {
+  try {
+    const fav = _favoritosCache.find(f => f.id === favId);
+    if (!fav) return;
+
+    const snapshot  = await getDocs(roteiroQuery);
+    const proxOrdem = snapshot.size;
+
+    await addDoc(collection(db, COLECAO_ROTEIRO), {
+      titulo:    fav.titulo,
+      tipo:      fav.tipo,
+      url:       fav.url,
+      status:    "parado",
+      ordem:     proxOrdem,
+      criadoEm:  serverTimestamp(),
+    });
+
+    showToast(`"${fav.titulo}" adicionado ao roteiro!`, "success");
+
+    // Fecha o painel após adicionar
+    const painel = document.getElementById("favoritos-painel");
+    if (painel) painel.classList.remove("aberto");
+
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao adicionar favorito ao roteiro.", "error");
   }
 }
 
