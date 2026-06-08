@@ -211,6 +211,14 @@ function _renderizarLista(container, itens) {
 
         <button
           class="btn btn-xs"
+          title="Salvar nos favoritos"
+          onclick="salvarFavorito('${item.id}')"
+        >
+          ⭐
+        </button>
+
+        <button
+          class="btn btn-xs"
           style="color:var(--red); border-color:var(--red);"
           onclick="removerItem('${item.id}')"
         >
@@ -221,9 +229,10 @@ function _renderizarLista(container, itens) {
     container.appendChild(card);
   });
 
-  window.prepararItem = prepararItem;
-  window.togglePlay   = togglePlay;
-  window.removerItem  = removerItem;
+  window.prepararItem  = prepararItem;
+  window.togglePlay    = togglePlay;
+  window.removerItem   = removerItem;
+  window.salvarFavorito = salvarFavorito;
 }
 
 // ---------------------------------------------------------------------------
@@ -295,6 +304,13 @@ async function removerItem(itemId) {
     console.error(e);
     showToast("Erro ao remover item.", "error");
   }
+}
+
+// ---------------------------------------------------------------------------
+// Salvar nos favoritos — em breve
+// ---------------------------------------------------------------------------
+async function salvarFavorito(itemId) {
+  showToast("Em breve: favoritos! ⭐", "info");
 }
 
 async function pararTudo() {
