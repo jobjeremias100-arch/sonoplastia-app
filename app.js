@@ -28,7 +28,8 @@ import {
 const COLECAO_ROTEIRO   = "roteiro";
 const COLECAO_FAVORITOS = "favoritos";
 
-/** IDs dos itens favoritos — atualizado em tempo real */
+/** Bloqueia re-renderização durante drag-and-drop */
+let _arrastando = false;
 let _favoritosIds   = new Set();
 let _favoritosCache = [];
 
@@ -163,8 +164,11 @@ function _escutarRoteiro() {
         nowPlayEl.textContent = "Nenhum item ativo";
       }
 
+      // Não re-renderiza durante drag-and-drop
+      if (_arrastando) return;
+
       _renderizarLista(listEl, itens);
-      listEl._itensCache = itens; // cache para re-renderização dos favoritos
+      listEl._itensCache = itens;
     },
     (error) => {
       console.error("Firestore error:", error);
@@ -286,11 +290,15 @@ function _inicializarSortable(container, itens) {
   if (typeof Sortable === "undefined") return;
 
   container._sortable = new Sortable(container, {
-    animation:     200,
-    ghostClass:    "sortable-ghost",
-    chosenClass:   "sortable-chosen",
-    delay:         150,      // pequeno delay para não conflitar com cliques
-    delayOnTouchOnly: true,  // delay só no touch (celular)
+    animation:        200,
+    ghostClass:       "sortable-ghost",
+    chosenClass:      "sortable-chosen",
+    delay:            150,
+    delayOnTouchOnly: true,
+
+    onStart: () => {
+      _arrastando = true;  // pausa o onSnapshot
+    },
 
     onEnd: async (evt) => {
       // Recalcula a nova ordem baseada na posição dos cards
@@ -310,6 +318,9 @@ function _inicializarSortable(container, itens) {
       } catch (e) {
         console.error(e);
         showToast("Erro ao salvar nova ordem.", "error");
+      } finally {
+        // Retoma re-renderização após salvar
+        setTimeout(() => { _arrastando = false; }, 500);
       }
     },
   });
