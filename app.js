@@ -267,10 +267,52 @@ function _renderizarLista(container, itens) {
     container.appendChild(card);
   });
 
-  window.prepararItem  = prepararItem;
-  window.togglePlay    = togglePlay;
-  window.removerItem   = removerItem;
+  window.prepararItem   = prepararItem;
+  window.togglePlay     = togglePlay;
+  window.removerItem    = removerItem;
   window.salvarFavorito = salvarFavorito;
+
+  // Inicializa o drag-and-drop após renderizar
+  _inicializarSortable(container, itens);
+}
+
+// ---------------------------------------------------------------------------
+// Inicializa o Sortable na lista do roteiro
+// ---------------------------------------------------------------------------
+function _inicializarSortable(container, itens) {
+  // Destrói instância anterior se existir
+  if (container._sortable) container._sortable.destroy();
+
+  if (typeof Sortable === "undefined") return;
+
+  container._sortable = new Sortable(container, {
+    animation:     200,
+    ghostClass:    "sortable-ghost",
+    chosenClass:   "sortable-chosen",
+    delay:         150,      // pequeno delay para não conflitar com cliques
+    delayOnTouchOnly: true,  // delay só no touch (celular)
+
+    onEnd: async (evt) => {
+      // Recalcula a nova ordem baseada na posição dos cards
+      const cards = [...container.querySelectorAll(".roteiro-item")];
+      const batch  = writeBatch(db);
+
+      cards.forEach((card, novaOrdem) => {
+        const id = card.dataset.id;
+        if (id) {
+          batch.update(doc(db, COLECAO_ROTEIRO, id), { ordem: novaOrdem });
+        }
+      });
+
+      try {
+        await batch.commit();
+        showToast("Ordem atualizada!", "success");
+      } catch (e) {
+        console.error(e);
+        showToast("Erro ao salvar nova ordem.", "error");
+      }
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------

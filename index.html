@@ -870,7 +870,27 @@
       display: none;
     }
     .badge-count.visivel { display: block; }
+
+    /* ── Drag and drop ── */
+    .roteiro-item {
+      cursor: grab;
+    }
+    .roteiro-item:active {
+      cursor: grabbing;
+    }
+    .roteiro-item.sortable-ghost {
+      opacity: 0.3;
+      background: var(--bg-card-alt);
+      border: 2px dashed var(--accent);
+    }
+    .roteiro-item.sortable-chosen {
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transform: scale(1.01);
+    }
   </style>
+
+  <!-- SortableJS — drag and drop sem dependências -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 </head>
 <body>
 
