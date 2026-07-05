@@ -28,6 +28,9 @@ import {
 const COLECAO_ROTEIRO   = "roteiro";
 const COLECAO_FAVORITOS = "favoritos";
 
+// ⚠️ Substitua pelo valor da sua chave da YouTube Data API v3
+const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
+
 /** Bloqueia re-renderização durante drag-and-drop */
 let _arrastando = false;
 let _favoritosIds   = new Set();
@@ -506,18 +509,45 @@ async function pararTudo() {
 }
 
 // ---------------------------------------------------------------------------
-// Cola o link da área de transferência no campo de URL do YouTube
+// Cola o link e busca o título automaticamente via YouTube Data API
 // ---------------------------------------------------------------------------
 async function colarLink() {
   try {
     const texto = await navigator.clipboard.readText();
-    const campo = document.getElementById("yt-url");
-    if (campo) {
-      campo.value = texto;
-      showToast("Link colado!", "success");
+    const campoUrl    = document.getElementById("yt-url");
+    const campoTitulo = document.getElementById("yt-titulo");
+    if (!campoUrl) return;
+
+    campoUrl.value = texto;
+    showToast("Link colado! Buscando título…", "info");
+
+    // Extrai o ID do vídeo e busca o título
+    const videoId = _extrairVideoId(texto);
+    if (videoId && YOUTUBE_API_KEY !== "COLE_SUA_CHAVE_AQUI") {
+      const titulo = await _buscarTituloYoutube(videoId);
+      if (titulo && campoTitulo && !campoTitulo.value) {
+        campoTitulo.value = titulo;
+        showToast(`Título encontrado: "${titulo}"`, "success");
+      }
     }
   } catch (e) {
     showToast("Permita o acesso à área de transferência.", "error");
+  }
+}
+
+// Busca o título do vídeo na YouTube Data API
+async function _buscarTituloYoutube(videoId) {
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.items && data.items.length > 0) {
+      return data.items[0].snippet.title;
+    }
+    return null;
+  } catch (e) {
+    console.error("Erro ao buscar título:", e);
+    return null;
   }
 }
 
