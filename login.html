@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sonoplastia — Entrar</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-deep:      #09090f;
+      --bg-card:      #16161f;
+      --border:       #2a2a3a;
+      --border-glow:  #3d3d5c;
+      --text:         #e8e8f0;
+      --text-muted:   #6b6b88;
+      --text-dim:     #3a3a55;
+      --accent:       #7c6af7;
+      --accent-dim:   #3e3578;
+      --accent-glow:  rgba(124,106,247,0.25);
+      --green:        #3ecf8e;
+      --red:          #f04a5a;
+      --radius:       10px;
+      --font-mono:    'JetBrains Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Grade de ruído sutil no fundo */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    /* Brilho sutil no topo do card */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    /* Logo / ícone */
+    .login-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 0 32px var(--accent-glow);
+    }
+
+    /* Título */
+    .login-titulo {
+      text-align: center;
+    }
+
+    .login-titulo h1 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .login-titulo p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    /* Formulário */
+    .login-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 15px;
+      letter-spacing: 0.1em;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      text-align: center;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* Botão entrar */
+    .btn-entrar {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      margin-top: 4px;
+    }
+
+    .btn-entrar:hover {
+      background: var(--accent);
+      box-shadow: 0 0 24px var(--accent-glow);
+    }
+
+    .btn-entrar:active { transform: scale(0.98); }
+
+    /* Mensagem de erro */
+    .erro-msg {
+      display: none;
+      font-size: 11px;
+      color: var(--red);
+      text-align: center;
+      padding: 8px 12px;
+      background: rgba(240,74,90,0.1);
+      border: 1px solid rgba(240,74,90,0.3);
+      border-radius: 6px;
+    }
+
+    .erro-msg.visivel { display: block; }
+
+    /* Dica de segurança */
+    .login-dica {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+
+    <div class="login-icon">🎛️</div>
+
+    <div class="login-titulo">
+      <h1>Sonoplastia</h1>
+      <p>Digite o código da sua sala para acessar o painel de controle.</p>
+    </div>
+
+    <div class="login-form">
+      <div>
+        <label class="form-label">Código da Sala</label>
+        <input
+          class="form-input"
+          type="text"
+          id="input-codigo"
+          placeholder="ex: conquista2025"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="erro-msg" id="erro-msg">
+        ⚠️ Digite um código de sala válido.
+      </div>
+
+      <button class="btn-entrar" onclick="entrar()">
+        Entrar →
+      </button>
+    </div>
+
+    <p class="login-dica">
+      🔒 Apenas quem tem o código acessa esta sala.<br>
+      Cada igreja usa seu próprio código exclusivo.
+    </p>
+
+  </div>
+
+  <script type="module">
+    import { db } from "./firebase-config.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Verifica se já tem sala salva — redireciona direto
+    const salvaAntes = localStorage.getItem("sonoplastia_sala");
+    if (salvaAntes) {
+      window.location.href = "index.html";
+    }
+
+    // Permite entrar com Enter
+    document.getElementById("input-codigo").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") entrar();
+    });
+
+    window.entrar = async function() {
+      const input   = document.getElementById("input-codigo");
+      const erroEl  = document.getElementById("erro-msg");
+      const btnEl   = document.querySelector(".btn-entrar");
+      const codigo  = input.value.trim().toLowerCase().replace(/\s+/g, "-");
+
+      if (!codigo || codigo.length < 3) {
+        erroEl.textContent = "⚠️ Digite um código de sala válido.";
+        erroEl.classList.add("visivel");
+        input.focus();
+        return;
+      }
+
+      // Feedback visual de carregando
+      btnEl.textContent    = "Verificando…";
+      btnEl.disabled       = true;
+      erroEl.classList.remove("visivel");
+
+      try {
+        // Consulta o Firestore para verificar se o código existe
+        const salaRef  = doc(db, "salas_permitidas", codigo);
+        const salaSnap = await getDoc(salaRef);
+
+        if (!salaSnap.exists()) {
+          // Código não cadastrado
+          erroEl.textContent = "⚠️ Código inválido. Verifique com o administrador.";
+          erroEl.classList.add("visivel");
+          btnEl.textContent = "Entrar →";
+          btnEl.disabled    = false;
+          input.focus();
+          return;
+        }
+
+        if (!salaSnap.data().ativa) {
+          // Sala desativada
+          erroEl.textContent = "⚠️ Esta sala está desativada. Contate o administrador.";
+          erroEl.classList.add("visivel");
+          btnEl.textContent = "Entrar →";
+          btnEl.disabled    = false;
+          return;
+        }
+
+        // Código válido — salva e redireciona
+        localStorage.setItem("sonoplastia_sala", codigo);
+        localStorage.setItem("sonoplastia_sala_nome", salaSnap.data().nome || codigo);
+        window.location.href = "index.html";
+
+      } catch (e) {
+        console.error(e);
+        erroEl.textContent = "⚠️ Erro ao verificar. Tente novamente.";
+        erroEl.classList.add("visivel");
+        btnEl.textContent = "Entrar →";
+        btnEl.disabled    = false;
+      }
+    };
+  </script>
+
+</body>
+</html>
