@@ -247,12 +247,6 @@
     import { db } from "./firebase-config.js";
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Verifica se já tem sala salva — redireciona direto
-    const salvaAntes = localStorage.getItem("sonoplastia_sala");
-    if (salvaAntes) {
-      window.location.href = "index.html";
-    }
-
     // Permite entrar com Enter
     document.getElementById("input-codigo").addEventListener("keydown", (e) => {
       if (e.key === "Enter") entrar();
@@ -277,12 +271,10 @@
       erroEl.classList.remove("visivel");
 
       try {
-        // Consulta o Firestore para verificar se o código existe
         const salaRef  = doc(db, "salas_permitidas", codigo);
         const salaSnap = await getDoc(salaRef);
 
         if (!salaSnap.exists()) {
-          // Código não cadastrado
           erroEl.textContent = "⚠️ Código inválido. Verifique com o administrador.";
           erroEl.classList.add("visivel");
           btnEl.textContent = "Entrar →";
@@ -292,7 +284,6 @@
         }
 
         if (!salaSnap.data().ativa) {
-          // Sala desativada
           erroEl.textContent = "⚠️ Esta sala está desativada. Contate o administrador.";
           erroEl.classList.add("visivel");
           btnEl.textContent = "Entrar →";
@@ -300,9 +291,9 @@
           return;
         }
 
-        // Código válido — salva e redireciona
-        localStorage.setItem("sonoplastia_sala", codigo);
-        localStorage.setItem("sonoplastia_sala_nome", salaSnap.data().nome || codigo);
+        // Código válido — salva apenas na sessão (some ao fechar o navegador)
+        sessionStorage.setItem("sonoplastia_sala", codigo);
+        sessionStorage.setItem("sonoplastia_sala_nome", salaSnap.data().nome || codigo);
         window.location.href = "index.html";
 
       } catch (e) {
