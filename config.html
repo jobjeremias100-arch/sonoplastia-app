@@ -286,6 +286,9 @@
       </div>
     </div>
     <a href="index.html" class="btn-voltar">← Voltar ao Painel</a>
+    <button class="btn-voltar" onclick="sair()" style="color:var(--red,#f04a5a); border-color:var(--red,#f04a5a);">
+      ✕ Sair da Sala
+    </button>
   </header>
 
   <!-- Conteúdo -->
@@ -394,6 +397,13 @@
         console.error(e);
         showToast("Erro ao salvar configuração.", "error");
       }
+    };
+
+    // ── Sair da sala ──
+    window.sair = () => {
+      localStorage.removeItem("sonoplastia_sala");
+      localStorage.removeItem("sonoplastia_sala_nome");
+      window.location.replace("login.html");
     };
 
     // ── Destaca o card ativo ──

@@ -7,7 +7,7 @@
 
   <!-- Verificação de sala — deve ser o primeiro script a rodar -->
   <script>
-    if (!sessionStorage.getItem("sonoplastia_sala")) {
+    if (!localStorage.getItem("sonoplastia_sala")) {
       window.location.replace("login.html");
     }
   </script>

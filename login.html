@@ -291,9 +291,9 @@
           return;
         }
 
-        // Código válido — salva apenas na sessão (some ao fechar o navegador)
-        sessionStorage.setItem("sonoplastia_sala", codigo);
-        sessionStorage.setItem("sonoplastia_sala_nome", salaSnap.data().nome || codigo);
+        // Código válido — salva e redireciona
+        localStorage.setItem("sonoplastia_sala", codigo);
+        localStorage.setItem("sonoplastia_sala_nome", salaSnap.data().nome || codigo);
         window.location.href = "index.html";
 
       } catch (e) {
