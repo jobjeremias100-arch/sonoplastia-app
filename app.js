@@ -22,14 +22,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // =============================================================================
-// CONSTANTES
+// CONSTANTES E SALA
 // =============================================================================
 
-const COLECAO_ROTEIRO   = "roteiro";
-const COLECAO_FAVORITOS = "favoritos";
+// Lê o código da sala salvo no login
+const _codigoSala = localStorage.getItem("sonoplastia_sala") || "default";
+
+// Prefixo das coleções — tudo isolado por sala
+const COLECAO_ROTEIRO   = `salas/${_codigoSala}/roteiro`;
+const COLECAO_FAVORITOS = `salas/${_codigoSala}/favoritos`;
+const COLECAO_CONFIG    = `salas/${_codigoSala}/config`;
 
 // ⚠️ Substitua pelo valor da sua chave da YouTube Data API v3
-const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
+const YOUTUBE_API_KEY = "COLE_SUA_CHAVE_AQUI";
 
 /** Bloqueia re-renderização durante drag-and-drop */
 let _arrastando = false;
@@ -77,7 +82,7 @@ function iniciarOperador() {
   window.removerFavorito        = removerFavorito;
 
   // Escuta o modo de operação em tempo real
-  const docConfig = doc(db, "config", "app");
+  const docConfig = doc(db, COLECAO_CONFIG, "app");
   onSnapshot(docConfig, (snap) => {
     if (!snap.exists()) return;
     const data = snap.data();
@@ -582,7 +587,7 @@ async function atualizarVolume(valor) {
   atualizarVolume._timer = setTimeout(async () => {
     try {
       await setDoc(
-        doc(db, "config", "app"),
+        doc(db, COLECAO_CONFIG, "app"),
         { volume: parseInt(valor) },
         { merge: true }
       );
@@ -694,7 +699,7 @@ function iniciarProjecao() {
   // -----------------------------------------------------------------------
   // Escuta o volume do Firestore e aplica nos players
   // -----------------------------------------------------------------------
-  const docConfigProjecao = doc(db, "config", "app");
+  const docConfigProjecao = doc(db, COLECAO_CONFIG, "app");
   onSnapshot(docConfigProjecao, (snap) => {
     if (!snap.exists()) return;
     const vol = snap.data().volume !== undefined ? snap.data().volume / 100 : 1;

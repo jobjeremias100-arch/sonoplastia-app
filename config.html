@@ -364,7 +364,8 @@
       onSnapshot,
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const DOC_CONFIG = doc(db, "config", "app");
+    const _codigoSala = localStorage.getItem("sonoplastia_sala") || "default";
+    const DOC_CONFIG  = doc(db, `salas/${_codigoSala}/config`, "app");
 
     // ── Indicador de conexão ──
     const statusDot   = document.getElementById("status-dot");
