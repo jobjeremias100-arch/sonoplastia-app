@@ -1044,6 +1044,14 @@
   <!-- Container de notificações (Toasts) -->
   <div id="toast-container"></div>
 
+  <!-- Verificação de sala — redireciona para login se não tiver código -->
+  <script>
+    const _sala = sessionStorage.getItem("sonoplastia_sala");
+    if (!_sala) {
+      window.location.replace("login.html");
+    }
+  </script>
+
   <!-- Módulo principal da aplicação -->
   <script type="module" src="app.js"></script>
 
