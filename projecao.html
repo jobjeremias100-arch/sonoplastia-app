@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -6,11 +6,6 @@
   <title>Projeção</title>
 
   <style>
-    /* =========================================================
-       TELA DE PROJEÇÃO — TOTALMENTE LIMPA
-       Fundo preto absoluto, sem qualquer elemento de UI visível.
-       Todo controle é feito remotamente pelo Firestore.
-    ========================================================= */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
@@ -18,10 +13,9 @@
       height: 100%;
       background: #000;
       overflow: hidden;
-      cursor: default;
+      cursor: none;
     }
 
-    /* Container principal que ocupa toda a tela */
     #projecao-container {
       position: fixed;
       inset: 0;
@@ -31,26 +25,17 @@
       background: #000;
     }
 
-    /* =====================================================
-       PLAYER DE YOUTUBE
-    ===================================================== */
     #youtube-wrapper {
       display: none;
       position: absolute;
       inset: 0;
     }
 
-    /* O iframe do YouTube ocupa 100% da tela */
     #youtube-player {
       width: 100%;
       height: 100%;
     }
 
-    /* =====================================================
-       PLAYER DE ÁUDIO
-       Exibe um fundo preto limpo enquanto o áudio toca.
-       (Elemento <audio> invisível)
-    ===================================================== */
     #audio-wrapper {
       display: none;
       position: absolute;
@@ -62,7 +47,6 @@
       gap: 20px;
     }
 
-    /* Indicador visual sutil para o áudio (não exibido na projeção) */
     .audio-wave {
       display: flex;
       align-items: flex-end;
@@ -96,12 +80,8 @@
       50%       { transform: scaleY(1.2); }
     }
 
-    /* Elemento de áudio oculto */
     #audio-player { display: none; }
 
-    /* =====================================================
-       PLAYER DE VÍDEO
-    ===================================================== */
     #video-wrapper {
       display: none;
       position: absolute;
@@ -113,55 +93,25 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
-      /* Remove qualquer controle nativo do navegador */
       pointer-events: none;
     }
 
-    /* Botão de tela cheia — aparece ao mover o mouse */
-    #btn-fullscreen {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-      background: rgba(124, 106, 247, 0.15);
-      border: 1px solid rgba(124, 106, 247, 0.5);
-      color: rgba(255,255,255,0.7);
-      font-family: monospace;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    #btn-fullscreen.visivel {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    #btn-fullscreen:hover {
-      background: rgba(124, 106, 247, 0.4);
-      color: #fff;
-    }
+    #video-player::-webkit-media-controls          { display: none !important; }
+    #video-player::-webkit-media-controls-enclosure { display: none !important; }
+    #video-player::-webkit-media-controls-panel    { display: none !important; }
+    video::-webkit-media-controls-play-button      { display: none !important; }
+    video::-webkit-media-controls-timeline         { display: none !important; }
+    video::-webkit-media-controls-overlay-play-button { display: none !important; }
+  </style>
 </head>
 <body>
 
-  <!-- Botão de tela cheia — aparece ao mover o mouse, some após 3s -->
-  <button id="btn-fullscreen">⛶ Tela Cheia</button>
-
   <div id="projecao-container">
 
-    <!-- Player do YouTube (controlado pelo Firestore) -->
     <div id="youtube-wrapper">
       <div id="youtube-player"></div>
     </div>
 
-    <!-- Player de Áudio (fundo preto durante a reprodução) -->
     <div id="audio-wrapper">
       <div class="audio-wave">
         <span></span><span></span><span></span>
@@ -170,7 +120,6 @@
       <audio id="audio-player" preload="auto"></audio>
     </div>
 
-    <!-- Player de Vídeo -->
     <div id="video-wrapper">
       <video id="video-player" preload="auto" playsinline disablePictureInPicture></video>
     </div>
@@ -187,43 +136,5 @@
   <!-- Script de escuta do Firebase e controle dos players -->
   <script type="module" src="app.js"></script>
 
-  <!-- Botão tela cheia + cursor automático -->
-  <script>
-    const btn = document.getElementById("btn-fullscreen");
-    let timerBtn    = null;
-    let timerCursor = null;
-
-    // Mostra cursor e botão ao mover o mouse
-    document.addEventListener("mousemove", () => {
-      // Mostra cursor
-      document.body.style.cursor = "default";
-      clearTimeout(timerCursor);
-      timerCursor = setTimeout(() => {
-        document.body.style.cursor = "none";
-      }, 3000);
-
-      // Mostra botão
-      btn.classList.add("visivel");
-      clearTimeout(timerBtn);
-      timerBtn = setTimeout(() => btn.classList.remove("visivel"), 3000);
-    });
-
-    // Alterna tela cheia ao clicar no botão
-    btn.addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen()
-          .then(() => { btn.textContent = "✕ Sair Tela Cheia"; })
-          .catch(err => console.log("Fullscreen error:", err));
-      } else {
-        document.exitFullscreen()
-          .then(() => { btn.textContent = "⛶ Tela Cheia"; });
-      }
-    });
-
-    // Atualiza texto ao sair com ESC
-    document.addEventListener("fullscreenchange", () => {
-      btn.textContent = document.fullscreenElement ? "✕ Sair Tela Cheia" : "⛶ Tela Cheia";
-    });
-  </script>
 </body>
 </html>
