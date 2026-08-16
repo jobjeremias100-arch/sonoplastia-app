@@ -177,6 +177,13 @@
 
   </div>
 
+  <!-- Verificação de sala -->
+  <script>
+    if (!localStorage.getItem("sonoplastia_sala")) {
+      window.location.replace("login.html");
+    }
+  </script>
+
   <!-- Script de escuta do Firebase e controle dos players -->
   <script type="module" src="app.js"></script>
 
