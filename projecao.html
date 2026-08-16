@@ -117,15 +117,42 @@
       pointer-events: none;
     }
 
-    #video-player::-webkit-media-controls          { display: none !important; }
-    #video-player::-webkit-media-controls-enclosure { display: none !important; }
-    #video-player::-webkit-media-controls-panel    { display: none !important; }
-    video::-webkit-media-controls-play-button      { display: none !important; }
-    video::-webkit-media-controls-timeline         { display: none !important; }
-    video::-webkit-media-controls-overlay-play-button { display: none !important; }
-  </style>
+    /* Botão de tela cheia — aparece ao mover o mouse */
+    #btn-fullscreen {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: rgba(124, 106, 247, 0.15);
+      border: 1px solid rgba(124, 106, 247, 0.5);
+      color: rgba(255,255,255,0.7);
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #btn-fullscreen.visivel {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #btn-fullscreen:hover {
+      background: rgba(124, 106, 247, 0.4);
+      color: #fff;
+    }
 </head>
 <body>
+
+  <!-- Botão de tela cheia — aparece ao mover o mouse, some após 3s -->
+  <button id="btn-fullscreen">⛶ Tela Cheia</button>
 
   <div id="projecao-container">
 
@@ -153,24 +180,37 @@
   <!-- Script de escuta do Firebase e controle dos players -->
   <script type="module" src="app.js"></script>
 
-  <!-- Tela cheia automática ao abrir -->
+  <!-- Tela cheia automática ao abrir + botão discreto -->
   <script>
-    // Tenta entrar em tela cheia assim que a página carrega
-    // O clique que abriu a janela conta como interação do usuário
-    function entrarTelaCheia() {
-      const el = document.documentElement;
-      if      (el.requestFullscreen)            el.requestFullscreen();
-      else if (el.webkitRequestFullscreen)      el.webkitRequestFullscreen();
-      else if (el.mozRequestFullScreen)         el.mozRequestFullScreen();
-      else if (el.msRequestFullscreen)          el.msRequestFullscreen();
-    }
+    const btn = document.getElementById("btn-fullscreen");
+    let timerBtn = null;
 
-    // Tenta imediatamente ao carregar
-    window.addEventListener("load", () => {
-      setTimeout(entrarTelaCheia, 300);
+    // Mostra o botão ao mover o mouse, some após 3s
+    document.addEventListener("mousemove", () => {
+      btn.classList.add("visivel");
+      clearTimeout(timerBtn);
+      timerBtn = setTimeout(() => btn.classList.remove("visivel"), 3000);
     });
 
-    // Fallback: se o navegador bloquear, tenta no primeiro clique
-    document.addEventListener("click", entrarTelaCheia, { once: true });
+    // Alterna tela cheia ao clicar no botão
+    btn.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        const el = document.documentElement;
+        if      (el.requestFullscreen)       el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+        btn.textContent = "✕ Sair Tela Cheia";
+      } else {
+        if      (document.exitFullscreen)       document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        btn.textContent = "⛶ Tela Cheia";
+      }
+    });
+
+    // Atualiza o texto do botão ao sair da tela cheia pelo teclado (ESC)
+    document.addEventListener("fullscreenchange", () => {
+      btn.textContent = document.fullscreenElement ? "✕ Sair Tela Cheia" : "⛶ Tela Cheia";
+    });
   </script>
+</body>
 </html>
