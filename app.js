@@ -274,7 +274,7 @@ function _renderizarLista(container, itens) {
           style="color:var(--text-muted); border-color:var(--border);"
           onclick="reiniciarItem('${item.id}')"
         >
-          ⏮
+          ⏮ Início
         </button>` : ''}
 
         <button
