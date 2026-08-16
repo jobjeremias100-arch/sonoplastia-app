@@ -98,6 +98,92 @@
     }
     .btn-voltar:hover { border-color: var(--accent); }
 
+    /* ── Categorias ── */
+    .categoria-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      transition: border-color 0.15s;
+    }
+    .categoria-item:hover { border-color: var(--border-glow); }
+
+    .categoria-nome {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .categoria-input {
+      flex: 1;
+      background: var(--bg-deep);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 4px 10px;
+      outline: none;
+    }
+
+    .btn-cat {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid var(--border);
+      background: var(--bg-card-alt);
+      color: var(--text-muted);
+    }
+    .btn-cat:hover { border-color: var(--accent); color: var(--text); }
+    .btn-cat.danger { border-color: var(--red); color: var(--red); }
+    .btn-cat.danger:hover { background: rgba(240,74,90,0.15); }
+    .btn-cat.save { border-color: var(--green); color: var(--green); }
+    .btn-cat.save:hover { background: rgba(62,207,142,0.15); }
+
+    .nova-categoria-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .nova-categoria-row input {
+      flex: 1;
+      padding: 9px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .nova-categoria-row input:focus { border-color: var(--accent); }
+
+    .btn-add-cat {
+      padding: 9px 16px;
+      background: var(--green-dim);
+      border: 1px solid var(--green);
+      border-radius: var(--radius);
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-add-cat:hover { background: var(--green); color: #000; }
+
     /* ── Conteúdo ── */
     .content {
       flex: 1;
@@ -351,7 +437,19 @@
       </div>
     </div>
 
-  </div>
+    <!-- Seção: Categorias do Roteiro -->
+    <div>
+      <div class="section-title">🏷️ Categorias do Roteiro</div>
+
+      <!-- Lista de categorias -->
+      <div id="lista-categorias"></div>
+
+      <!-- Adicionar nova categoria -->
+      <div class="nova-categoria-row">
+        <input type="text" id="nova-cat-input" placeholder="Nova categoria…" />
+        <button class="btn-add-cat" onclick="adicionarCategoria()">＋ Adicionar</button>
+      </div>
+    </div>
 
   <div id="toast-container"></div>
 
@@ -366,6 +464,18 @@
 
     const _codigoSala = localStorage.getItem("sonoplastia_sala") || "default";
     const DOC_CONFIG  = doc(db, `salas/${_codigoSala}/config`, "app");
+    const DOC_CATS    = doc(db, `salas/${_codigoSala}/config`, "categorias");
+
+    // Categorias padrão pré-carregadas
+    const CATEGORIAS_PADRAO = [
+      "Música Especial",
+      "Louvor Congregacional",
+      "Hino do Serviço",
+      "Adoração Infantil",
+      "Ofertório",
+      "Provai e Vede",
+      "Informativo",
+    ];
 
     // ── Indicador de conexão ──
     const statusDot   = document.getElementById("status-dot");
@@ -406,6 +516,105 @@
       localStorage.removeItem("sonoplastia_sala_nome");
       window.location.replace("login.html");
     };
+
+    // ── Categorias ──
+    let _categorias = [];
+
+    // Carrega categorias do Firestore — se não existir, cria com padrão
+    async function carregarCategorias() {
+      const snap = await getDoc(DOC_CATS);
+      if (snap.exists() && snap.data().lista) {
+        _categorias = snap.data().lista;
+      } else {
+        // Primeira vez — salva as categorias padrão
+        _categorias = [...CATEGORIAS_PADRAO];
+        await setDoc(DOC_CATS, { lista: _categorias });
+      }
+      _renderizarCategorias();
+    }
+
+    carregarCategorias();
+
+    // Renderiza a lista de categorias
+    function _renderizarCategorias() {
+      const lista = document.getElementById("lista-categorias");
+      if (!lista) return;
+
+      if (_categorias.length === 0) {
+        lista.innerHTML = `<div style="font-size:12px; color:var(--text-muted); font-style:italic; padding:8px 0;">Nenhuma categoria cadastrada.</div>`;
+        return;
+      }
+
+      lista.innerHTML = _categorias.map((cat, i) => `
+        <div class="categoria-item" id="cat-item-${i}">
+          <span class="categoria-nome" id="cat-nome-${i}">${_esc(cat)}</span>
+          <button class="btn-cat" onclick="editarCategoria(${i})">✏️</button>
+          <button class="btn-cat danger" onclick="excluirCategoria(${i})">🗑</button>
+        </div>
+      `).join("");
+    }
+
+    // Editar categoria
+    window.editarCategoria = (i) => {
+      const item  = document.getElementById(`cat-item-${i}`);
+      const nome  = document.getElementById(`cat-nome-${i}`);
+      const valor = _categorias[i];
+
+      item.innerHTML = `
+        <input class="categoria-input" id="cat-edit-${i}" value="${_esc(valor)}" />
+        <button class="btn-cat save" onclick="salvarEdicao(${i})">✓ Salvar</button>
+        <button class="btn-cat" onclick="cancelarEdicao()">✕</button>
+      `;
+      document.getElementById(`cat-edit-${i}`).focus();
+    };
+
+    window.cancelarEdicao = () => _renderizarCategorias();
+
+    window.salvarEdicao = async (i) => {
+      const input = document.getElementById(`cat-edit-${i}`);
+      const novo  = input.value.trim();
+      if (!novo) { showToast("Nome não pode ser vazio.", "error"); return; }
+      _categorias[i] = novo;
+      await _salvarCategorias();
+      showToast("Categoria atualizada!", "success");
+    };
+
+    // Excluir categoria
+    window.excluirCategoria = async (i) => {
+      if (!confirm(`Excluir "${_categorias[i]}"?`)) return;
+      _categorias.splice(i, 1);
+      await _salvarCategorias();
+      showToast("Categoria removida.", "info");
+    };
+
+    // Adicionar nova categoria
+    window.adicionarCategoria = async () => {
+      const input = document.getElementById("nova-cat-input");
+      const nome  = input.value.trim();
+      if (!nome) { showToast("Digite o nome da categoria.", "error"); return; }
+      if (_categorias.includes(nome)) { showToast("Categoria já existe.", "error"); return; }
+      _categorias.push(nome);
+      await _salvarCategorias();
+      input.value = "";
+      showToast(`"${nome}" adicionada!`, "success");
+    };
+
+    // Enter para adicionar
+    document.getElementById("nova-cat-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") adicionarCategoria();
+    });
+
+    // Salva no Firestore e re-renderiza
+    async function _salvarCategorias() {
+      await setDoc(DOC_CATS, { lista: _categorias });
+      _renderizarCategorias();
+    }
+
+    function _esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
 
     // ── Destaca o card ativo ──
     function _destacarModo(modo) {
