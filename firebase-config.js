@@ -6,6 +6,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // =============================================================================
 // ⚠️  ATENÇÃO: INSIRA SUAS CREDENCIAIS DO FIREBASE ABAIXO
@@ -16,12 +17,12 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 // 4. Copie e cole o objeto firebaseConfig abaixo
 // =============================================================================
 const firebaseConfig = {
-  apiKey:            "AIzaSyBhuS2gRNXor-uzXXMrwFVipKdoHRoLX6c",
-  authDomain:        "sonoplastia-igreja-f1fc0.firebaseapp.com",
-  projectId:         "sonoplastia-igreja-f1fc0",
-  storageBucket:     "sonoplastia-igreja-f1fc0.firebasestorage.app",
+  apiKey: "AIzaSyBhuS2gRNXor-uzXXMrwFVipKdoHRoLX6c",
+  authDomain: "sonoplastia-igreja-f1fc0.firebaseapp.com",
+  projectId: "sonoplastia-igreja-f1fc0",
+  storageBucket: "sonoplastia-igreja-f1fc0.firebasestorage.app",
   messagingSenderId: "586681648391",
-  appId:             "1:586681648391:web:98b87797ed468f801df1a2",
+  appId: "1:586681648391:web:98b87797ed468f801df1a2"
 };
 // =============================================================================
 
@@ -29,4 +30,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Exporta apenas o Firestore (Storage não é necessário no plano Spark)
-export const db = getFirestore(app);
+export const db   = getFirestore(app);
+export const auth = getAuth(app);
