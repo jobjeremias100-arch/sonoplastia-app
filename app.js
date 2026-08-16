@@ -708,11 +708,11 @@ function iniciarProjecao() {
       height: "100%",
       playerVars: {
         autoplay:       1,
-        controls:       0,
+        controls:       1, // Controles nativos do YouTube ativados
         modestbranding: 1,
         rel:            0,
         iv_load_policy: 3,
-        fs:             0,
+        fs:             1, // Botão de tela cheia ativado
         enablejsapi:    1,
         origin:         window.location.origin,
       },
