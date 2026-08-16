@@ -10,11 +10,13 @@
     if (!localStorage.getItem("sonoplastia_sala")) {
       window.location.replace("login.html");
     }
-    // Preenche o nome da sala no topbar
-    const _salaNome   = localStorage.getItem("sonoplastia_sala_nome");
-    const _salaCodigo = localStorage.getItem("sonoplastia_sala");
-    const _salaEl     = document.getElementById("sala-nome-display");
-    if (_salaEl) _salaEl.textContent = _salaNome || _salaCodigo || "—";
+    // Preenche o nome da sala após o DOM carregar
+    document.addEventListener("DOMContentLoaded", () => {
+      const _salaNome   = localStorage.getItem("sonoplastia_sala_nome");
+      const _salaCodigo = localStorage.getItem("sonoplastia_sala");
+      const _salaEl     = document.getElementById("sala-nome-display");
+      if (_salaEl) _salaEl.textContent = _salaNome || _salaCodigo || "—";
+    });
   </script>
 
   <!-- PWA: permite salvar na tela inicial do celular -->
