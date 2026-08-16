@@ -267,6 +267,16 @@ function _renderizarLista(container, itens) {
           ${isTocando ? "⏸ Pausar" : "▶ Play"}
         </button>
 
+        ${isTocando || isPreparado ? `
+        <button
+          class="btn btn-xs"
+          title="Reiniciar do início"
+          style="color:var(--text-muted); border-color:var(--border);"
+          onclick="reiniciarItem('${item.id}')"
+        >
+          ⏮
+        </button>` : ''}
+
         <button
           class="btn btn-xs"
           style="color:var(--red); border-color:var(--red);"
@@ -283,6 +293,7 @@ function _renderizarLista(container, itens) {
   window.togglePlay     = togglePlay;
   window.removerItem    = removerItem;
   window.salvarFavorito = salvarFavorito;
+  window.reiniciarItem  = reiniciarItem;
 
   // Inicializa o drag-and-drop após renderizar
   _inicializarSortable(container, itens);
@@ -466,7 +477,21 @@ async function adicionarFavAoRoteiro(favId) {
 }
 
 // ---------------------------------------------------------------------------
-// Salvar / Remover dos favoritos (toggle)
+// Reinicia o vídeo do início
+// ---------------------------------------------------------------------------
+async function reiniciarItem(itemId) {
+  try {
+    // Usa um campo especial "reiniciar" como trigger para a projeção
+    await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), {
+      reiniciar: Date.now(), // timestamp único força o onSnapshot a disparar
+      status: "tocando",
+    });
+    showToast("⏮ Reiniciando do início…", "info");
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao reiniciar.", "error");
+  }
+}
 // ---------------------------------------------------------------------------
 async function salvarFavorito(itemId) {
   try {
@@ -671,6 +696,7 @@ function iniciarProjecao() {
   let ytReady     = false;
   let ytUrlAtual  = null;
   let itemAtualId = null;
+  let reiniciarAtual = null;
 
   const tag = document.createElement("script");
   tag.src   = "https://www.youtube.com/iframe_api";
@@ -732,21 +758,25 @@ function iniciarProjecao() {
 
     if (!itemAtivo) {
       _limparTela(ytPlayer, ytReady);
-      itemAtualId = null;
+      itemAtualId    = null;
+      reiniciarAtual = null;
       return;
     }
 
-    const { id, tipo, url, status } = itemAtivo;
-    const mudouItem = id !== itemAtualId;
-    itemAtualId = id;
+    const { id, tipo, url, status, reiniciar } = itemAtivo;
+    const mudouItem    = id !== itemAtualId;
+    const deveReiniciar = reiniciar && reiniciar !== reiniciarAtual;
+
+    itemAtualId    = id;
+    reiniciarAtual = reiniciar;
 
     if (tipo === "youtube") {
-      _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual,
+      _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveReiniciar, ytUrlAtual,
         setYtUrl: (u) => { ytUrlAtual = u; } });
     } else if (tipo === "audio") {
-      _controlarAudio({ url, status, mudouItem });
+      _controlarAudio({ url, status, mudouItem, deveReiniciar });
     } else if (tipo === "video") {
-      _controlarVideo({ url, status, mudouItem });
+      _controlarVideo({ url, status, mudouItem, deveReiniciar });
     }
   });
 }
@@ -754,7 +784,7 @@ function iniciarProjecao() {
 // ---------------------------------------------------------------------------
 // Controle YouTube na Projeção
 // ---------------------------------------------------------------------------
-function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual, setYtUrl }) {
+function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveReiniciar, ytUrlAtual, setYtUrl }) {
   _mostrarPlayer("youtube");
 
   const videoId = _extrairVideoId(url);
@@ -767,6 +797,10 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtu
       setYtUrl(url);
       ytPlayer.loadVideoById(videoId);
       if (status === "preparado") ytPlayer.pauseVideo();
+    } else if (deveReiniciar) {
+      // Volta ao início e continua tocando
+      ytPlayer.seekTo(0, true);
+      ytPlayer.playVideo();
     } else {
       if (status === "tocando") {
         ytPlayer.playVideo();
@@ -781,7 +815,7 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtu
 // ---------------------------------------------------------------------------
 // Controle Áudio na Projeção
 // ---------------------------------------------------------------------------
-function _controlarAudio({ url, status, mudouItem }) {
+function _controlarAudio({ url, status, mudouItem, deveReiniciar }) {
   _mostrarPlayer("audio");
 
   const audioEl   = document.getElementById("audio-player");
@@ -790,16 +824,15 @@ function _controlarAudio({ url, status, mudouItem }) {
   if (mudouItem || (url && audioEl.src !== url)) {
     audioEl.src = url;
     audioEl.load();
+  } else if (deveReiniciar) {
+    audioEl.currentTime = 0;
   }
 
   if (status === "tocando") {
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        const desbloquear = () => {
-          audioEl.play();
-          document.removeEventListener("click", desbloquear);
-        };
+        const desbloquear = () => { audioEl.play(); document.removeEventListener("click", desbloquear); };
         document.addEventListener("click", desbloquear);
       });
     }
@@ -813,7 +846,7 @@ function _controlarAudio({ url, status, mudouItem }) {
 // ---------------------------------------------------------------------------
 // Controle Vídeo na Projeção
 // ---------------------------------------------------------------------------
-function _controlarVideo({ url, status, mudouItem }) {
+function _controlarVideo({ url, status, mudouItem, deveReiniciar }) {
   _mostrarPlayer("video");
 
   const videoEl = document.getElementById("video-player");
@@ -821,16 +854,15 @@ function _controlarVideo({ url, status, mudouItem }) {
   if (mudouItem || (url && videoEl.src !== url)) {
     videoEl.src = url;
     videoEl.load();
+  } else if (deveReiniciar) {
+    videoEl.currentTime = 0;
   }
 
   if (status === "tocando") {
     const playPromise = videoEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        const desbloquear = () => {
-          videoEl.play();
-          document.removeEventListener("click", desbloquear);
-        };
+        const desbloquear = () => { videoEl.play(); document.removeEventListener("click", desbloquear); };
         document.addEventListener("click", desbloquear);
       });
     }
