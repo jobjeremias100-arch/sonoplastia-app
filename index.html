@@ -10,6 +10,11 @@
     if (!localStorage.getItem("sonoplastia_sala")) {
       window.location.replace("login.html");
     }
+    // Preenche o nome da sala no topbar
+    const _salaNome   = localStorage.getItem("sonoplastia_sala_nome");
+    const _salaCodigo = localStorage.getItem("sonoplastia_sala");
+    const _salaEl     = document.getElementById("sala-nome-display");
+    if (_salaEl) _salaEl.textContent = _salaNome || _salaCodigo || "—";
   </script>
 
   <!-- PWA: permite salvar na tela inicial do celular -->
@@ -715,6 +720,18 @@
       color: var(--text-dim);
       margin-top: 2px;
     }
+
+    .topbar-sala {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
     @media (max-width: 860px) {
       .content { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
       .panel-side { border-left: none; border-top: 1px solid var(--border); }
@@ -913,6 +930,12 @@
           <div class="brand-title">Sonoplastia</div>
           <div class="brand-subtitle">Painel do Operador</div>
         </div>
+      </div>
+
+      <!-- Nome da sala atual -->
+      <div class="topbar-sala" id="topbar-sala">
+        <span style="font-size:10px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase;">Sala</span>
+        <span id="sala-nome-display" style="font-family:var(--font-display); font-size:13px; font-weight:700; color:var(--accent);">—</span>
       </div>
 
       <div class="topbar-status">
