@@ -661,16 +661,24 @@ async function _carregarCategorias() {
   }
 }
 
-// Mostra/esconde campo livre conforme seleção
+// Mostra/esconde campos conforme seleção
 function onCategoriaChange(valor) {
-  const campoLivre = document.getElementById("yt-titulo");
-  if (!campoLivre) return;
+  const campoLivre   = document.getElementById("yt-titulo");
+  const campoDetalhe = document.getElementById("yt-detalhe");
+  if (!campoLivre || !campoDetalhe) return;
+
   if (valor === "__livre__") {
-    campoLivre.style.display = "block";
+    // Modo livre: esconde detalhe, mostra campo livre
+    campoDetalhe.style.display = "none";
+    campoDetalhe.value         = "";
+    campoLivre.style.display   = "block";
     campoLivre.focus();
   } else {
-    campoLivre.style.display = "none";
-    campoLivre.value = "";
+    // Categoria selecionada: mostra detalhe, esconde campo livre
+    campoDetalhe.style.display = "block";
+    campoLivre.style.display   = "none";
+    campoLivre.value           = "";
+    campoDetalhe.focus();
   }
 }
 // ---------------------------------------------------------------------------
@@ -684,7 +692,8 @@ async function adicionarYoutube() {
   if (select && select.value === "__livre__") {
     tituloBase = campoLivre ? campoLivre.value.trim() : "";
   } else if (select && select.value) {
-    tituloBase = select.value;
+    const detalhe = document.getElementById("yt-detalhe")?.value.trim();
+    tituloBase = detalhe ? `${select.value} — ${detalhe}` : select.value;
   } else if (campoLivre) {
     tituloBase = campoLivre.value.trim();
   }
@@ -731,6 +740,8 @@ async function adicionarYoutube() {
     // Limpa os campos
     if (select)     { select.value = ""; }
     if (campoLivre) { campoLivre.value = ""; campoLivre.style.display = "none"; }
+    const campoDetalhe = document.getElementById("yt-detalhe");
+    if (campoDetalhe) { campoDetalhe.value = ""; }
     document.getElementById("yt-url").value = "";
     showToast(`"${titulo}" adicionado ao roteiro!`, "success");
   } catch (e) {
