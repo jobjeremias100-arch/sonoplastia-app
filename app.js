@@ -20,7 +20,6 @@ import {
   writeBatch,
   getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 // =============================================================================
 // CONSTANTES E SALA
 // =============================================================================
@@ -80,6 +79,10 @@ function iniciarOperador() {
   window.toggleFavoritos        = toggleFavoritos;
   window.adicionarFavAoRoteiro  = adicionarFavAoRoteiro;
   window.removerFavorito        = removerFavorito;
+  window.onCategoriaChange      = onCategoriaChange;
+
+  // Carrega categorias do Firestore para o select
+  _carregarCategorias();
 
   // Escuta o modo de operação em tempo real
   const docConfig = doc(db, COLECAO_CONFIG, "app");
@@ -634,14 +637,65 @@ async function _pararTodosExceto(exceptId) {
 }
 
 // ---------------------------------------------------------------------------
-// Adicionar item do YouTube
+// Categorias do Roteiro
+// ---------------------------------------------------------------------------
+async function _carregarCategorias() {
+  const select = document.getElementById("yt-categoria");
+  if (!select) return;
+
+  try {
+    const snap = await getDoc(doc(db, COLECAO_CONFIG, "categorias"));
+    const lista = snap.exists() ? (snap.data().lista || []) : [
+      "Música Especial", "Louvor Congregacional", "Hino do Serviço",
+      "Adoração Infantil", "Ofertório", "Provai e Vede", "Informativo"
+    ];
+
+    select.innerHTML = `
+      <option value="">Selecione uma categoria…</option>
+      ${lista.map(c => `<option value="${_escapeHtml(c)}">${_escapeHtml(c)}</option>`).join("")}
+      <option value="__livre__">✏️ Digitar livremente…</option>
+    `;
+  } catch (e) {
+    console.error("Erro ao carregar categorias:", e);
+    select.innerHTML = `<option value="__livre__">✏️ Digitar livremente…</option>`;
+  }
+}
+
+// Mostra/esconde campo livre conforme seleção
+function onCategoriaChange(valor) {
+  const campoLivre = document.getElementById("yt-titulo");
+  if (!campoLivre) return;
+  if (valor === "__livre__") {
+    campoLivre.style.display = "block";
+    campoLivre.focus();
+  } else {
+    campoLivre.style.display = "none";
+    campoLivre.value = "";
+  }
+}
 // ---------------------------------------------------------------------------
 async function adicionarYoutube() {
-  const titulo = document.getElementById("yt-titulo").value.trim();
-  const url    = document.getElementById("yt-url").value.trim();
+  const select     = document.getElementById("yt-categoria");
+  const campoLivre = document.getElementById("yt-titulo");
+  const url        = document.getElementById("yt-url").value.trim();
 
-  if (!titulo || !url) {
-    showToast("Preencha o título e a URL do YouTube.", "error");
+  // Define o título conforme a seleção
+  let tituloBase = "";
+  if (select && select.value === "__livre__") {
+    tituloBase = campoLivre ? campoLivre.value.trim() : "";
+  } else if (select && select.value) {
+    tituloBase = select.value;
+  } else if (campoLivre) {
+    tituloBase = campoLivre.value.trim();
+  }
+
+  if (!tituloBase) {
+    showToast("Selecione uma categoria ou digite um título.", "error");
+    return;
+  }
+
+  if (!url) {
+    showToast("Cole a URL do YouTube.", "error");
     return;
   }
 
@@ -654,6 +708,17 @@ async function adicionarYoutube() {
     const snapshot  = await getDocs(roteiroQuery);
     const proxOrdem = snapshot.size;
 
+    // Conta repetições para numerar automaticamente
+    let contador = 0;
+    snapshot.forEach((d) => {
+      const t = d.data().titulo || "";
+      if (t === tituloBase || t.match(new RegExp(`^${tituloBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\d+$`))) {
+        contador++;
+      }
+    });
+
+    const titulo = contador === 0 ? tituloBase : `${tituloBase} ${contador + 1}`;
+
     await addDoc(collection(db, COLECAO_ROTEIRO), {
       titulo,
       tipo:     "youtube",
@@ -663,8 +728,10 @@ async function adicionarYoutube() {
       criadoEm: serverTimestamp(),
     });
 
-    document.getElementById("yt-titulo").value = "";
-    document.getElementById("yt-url").value    = "";
+    // Limpa os campos
+    if (select)     { select.value = ""; }
+    if (campoLivre) { campoLivre.value = ""; campoLivre.style.display = "none"; }
+    document.getElementById("yt-url").value = "";
     showToast(`"${titulo}" adicionado ao roteiro!`, "success");
   } catch (e) {
     console.error(e);

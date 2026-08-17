@@ -1019,8 +1019,19 @@
           <div class="side-section-title">🎬 &nbsp;Adicionar YouTube</div>
 
           <div class="form-group">
-            <label class="form-label">Título</label>
-            <input class="form-input" type="text" id="yt-titulo" placeholder="Ex: Louvor de Abertura" />
+            <label class="form-label">Categoria / Título</label>
+            <!-- Toggle de categorias -->
+            <select class="form-select" id="yt-categoria" onchange="onCategoriaChange(this.value)">
+              <option value="">Carregando categorias…</option>
+            </select>
+            <!-- Campo livre — aparece só quando "livre" é selecionado -->
+            <input
+              class="form-input"
+              type="text"
+              id="yt-titulo"
+              placeholder="Digite o título…"
+              style="margin-top:6px; display:none;"
+            />
           </div>
 
           <div class="form-group">
