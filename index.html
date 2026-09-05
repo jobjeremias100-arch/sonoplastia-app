@@ -1051,6 +1051,29 @@
           </div>
         </div>
 
+        <!-- Planejamento do Ministério -->
+        <div class="side-section" id="secao-planejamento" style="display:none;">
+          <div class="side-section-title">🎵 &nbsp;Planejamento do Ministério</div>
+
+          <!-- Seletor de data -->
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Data do Culto</label>
+            <input class="form-input" type="date" id="plan-data" onchange="carregarPlanejamento(this.value)" />
+          </div>
+
+          <!-- Lista de músicas planejadas -->
+          <div id="plan-lista" style="margin-bottom:10px;">
+            <div style="font-size:11px; color:var(--text-dim); font-style:italic; text-align:center; padding:12px 0;">
+              Selecione uma data para ver o planejamento.
+            </div>
+          </div>
+
+          <!-- Botão importar -->
+          <button class="btn btn-green btn-sm" style="width:100%; justify-content:center;" onclick="importarPlanejamento()" id="btn-importar" style="display:none;">
+            ⬇ Importar para o Roteiro
+          </button>
+        </div>
+
         <!-- Adicionar item YouTube manualmente -->
         <div class="side-section">
           <div class="side-section-title">🎬 &nbsp;Adicionar YouTube</div>

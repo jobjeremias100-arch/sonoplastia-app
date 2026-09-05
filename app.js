@@ -84,6 +84,20 @@ function iniciarOperador() {
   window.fecharConvocacao       = fecharConvocacao;
   window.gerarConvocacao        = gerarConvocacao;
   window.copiarConvocacao       = copiarConvocacao;
+  window.carregarPlanejamento   = carregarPlanejamento;
+  window.importarPlanejamento   = importarPlanejamento;
+
+  // Mostra seção de planejamento e define data padrão
+  const secao = document.getElementById("secao-planejamento");
+  if (secao) {
+    secao.style.display = "block";
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dd   = String(hoje.getDate()).padStart(2, "0");
+    const inputData = document.getElementById("plan-data");
+    if (inputData) inputData.value = `${yyyy}-${mm}-${dd}`;
+  }
 
   // Carrega categorias do Firestore para o select
   _carregarCategorias();
@@ -638,6 +652,94 @@ async function _pararTodosExceto(exceptId) {
     }
   });
   await batch.commit();
+}
+
+// ---------------------------------------------------------------------------
+// Planejamento do Ministério
+// ---------------------------------------------------------------------------
+let _musicasPlanejadas = [];
+
+async function carregarPlanejamento(dataStr) {
+  const lista   = document.getElementById("plan-lista");
+  const btnImp  = document.getElementById("btn-importar");
+  if (!lista || !dataStr) return;
+
+  lista.innerHTML = `<div style="font-size:11px; color:var(--text-muted); text-align:center; padding:12px 0;">Carregando…</div>`;
+
+  try {
+    const colRef = collection(db, `salas/${_codigoSala}/planejamento/${dataStr}/musicas`);
+    const snap   = await getDocs(query(colRef, orderBy("criadoEm", "asc")));
+
+    if (snap.empty) {
+      _musicasPlanejadas = [];
+      btnImp.style.display = "none";
+      lista.innerHTML = `<div style="font-size:11px; color:var(--text-dim); font-style:italic; text-align:center; padding:12px 0;">Nenhuma música planejada para esta data.</div>`;
+      return;
+    }
+
+    _musicasPlanejadas = [];
+    snap.forEach(d => _musicasPlanejadas.push({ id: d.id, ...d.data() }));
+
+    lista.innerHTML = _musicasPlanejadas.map(m => `
+      <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border);">
+        <img src="https://img.youtube.com/vi/${m.videoId || ''}/mqdefault.jpg"
+             style="width:48px; height:34px; border-radius:4px; object-fit:cover; background:var(--bg-deep);"
+             onerror="this.style.display='none'" />
+        <div style="flex:1; overflow:hidden;">
+          <div style="font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ${_escapeHtml(m.titulo || "Sem título")}
+          </div>
+          ${m.nome ? `<div style="font-size:10px; color:var(--accent);">👤 ${_escapeHtml(m.nome)}</div>` : ""}
+        </div>
+      </div>
+    `).join("");
+
+    // Remove borda do último
+    lista.lastElementChild && (lista.lastElementChild.style.borderBottom = "none");
+    btnImp.style.display = "block";
+
+  } catch (e) {
+    console.error(e);
+    lista.innerHTML = `<div style="font-size:11px; color:var(--red); text-align:center; padding:12px 0;">Erro ao carregar planejamento.</div>`;
+  }
+}
+
+async function importarPlanejamento() {
+  if (!_musicasPlanejadas.length) {
+    showToast("Nenhuma música para importar.", "error");
+    return;
+  }
+
+  const btnImp = document.getElementById("btn-importar");
+  btnImp.textContent = "Importando…";
+  btnImp.disabled    = true;
+
+  try {
+    const snapshot  = await getDocs(roteiroQuery);
+    let   proxOrdem = snapshot.size;
+    const batch     = writeBatch(db);
+
+    _musicasPlanejadas.forEach((m) => {
+      const novoRef = doc(collection(db, COLECAO_ROTEIRO));
+      batch.set(novoRef, {
+        titulo:    m.titulo || "Música do Ministério",
+        tipo:      "youtube",
+        url:       m.link,
+        status:    "parado",
+        ordem:     proxOrdem++,
+        criadoEm:  serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+    showToast(`${_musicasPlanejadas.length} música(s) importada(s) para o roteiro! ✅`, "success");
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao importar. Tente novamente.", "error");
+  } finally {
+    btnImp.textContent = "⬇ Importar para o Roteiro";
+    btnImp.disabled    = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
