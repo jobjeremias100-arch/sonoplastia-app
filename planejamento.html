@@ -655,6 +655,30 @@
       });
     });
 
+    // ── Chave da YouTube Data API ──
+    // A mesma chave configurada no app.js
+    const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
+
+    // ── Busca título e canal do vídeo ──
+    async function _buscarInfoYoutube(videoId) {
+      try {
+        if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === "COLE_SUA_CHAVE_AQUI") return null;
+        const url  = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.items && data.items.length > 0) {
+          return {
+            titulo: data.items[0].snippet.title,
+            canal:  data.items[0].snippet.channelTitle,
+          };
+        }
+        return null;
+      } catch (e) {
+        console.error("Erro ao buscar info:", e);
+        return null;
+      }
+    }
+
     // ── Adicionar música ──
     window.adicionarMusica = async () => {
       const linkEl  = document.getElementById("input-link");
@@ -664,31 +688,31 @@
       const link    = linkEl.value.trim();
       const nome    = nomeEl.value.trim();
 
-      // Valida link
       if (!link || (!link.includes("youtube.com") && !link.includes("youtu.be"))) {
         erroEl.classList.add("visivel");
         return;
       }
       erroEl.classList.remove("visivel");
 
-      // Extrai video ID
       const videoId = _extrairVideoId(link);
-      if (!videoId) {
-        erroEl.classList.add("visivel");
-        return;
-      }
+      if (!videoId) { erroEl.classList.add("visivel"); return; }
+
+      btnEl.textContent = "Buscando título…";
+      btnEl.disabled    = true;
+
+      // Busca título na API
+      const info = await _buscarInfoYoutube(videoId);
 
       btnEl.textContent = "Salvando…";
-      btnEl.disabled    = true;
 
       try {
         await addDoc(colRef, {
           link,
           videoId,
-          titulo:    "", // será preenchido pela API na próxima etapa
-          canal:     "",
+          titulo:   info?.titulo || "",
+          canal:    info?.canal  || "",
           nome,
-          criadoEm:  serverTimestamp(),
+          criadoEm: serverTimestamp(),
         });
 
         linkEl.value = "";
@@ -709,14 +733,38 @@
       window.location.href = "https://www.youtube.com";
     };
 
-    // ── Colar link ──
+    // ── Colar link e mostrar preview ──
     window.colarLink = async () => {
       try {
         const texto = await navigator.clipboard.readText();
         const input = document.getElementById("input-link");
-        if (input) {
-          input.value = texto;
-          showToast("Link colado!", "success");
+        if (!input) return;
+        input.value = texto;
+
+        // Tenta mostrar preview
+        const videoId = _extrairVideoId(texto);
+        if (videoId) {
+          const preview      = document.getElementById("preview-card");
+          const previewThumb = document.getElementById("preview-thumb");
+          const previewTit   = document.getElementById("preview-titulo");
+          const previewCan   = document.getElementById("preview-canal");
+
+          previewThumb.src      = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+          previewTit.textContent = "Buscando título…";
+          previewCan.textContent = "";
+          preview.classList.add("visivel");
+
+          // Busca info na API
+          const info = await _buscarInfoYoutube(videoId);
+          if (info) {
+            previewTit.textContent = info.titulo;
+            previewCan.textContent = info.canal;
+          } else {
+            previewTit.textContent = "Vídeo encontrado";
+          }
+          showToast("Link colado! ✅", "success");
+        } else {
+          showToast("Link colado!", "info");
         }
       } catch (e) {
         showToast("Permita o acesso à área de transferência.", "error");
