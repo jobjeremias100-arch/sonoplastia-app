@@ -1011,6 +1011,43 @@
             <button class="btn btn-danger btn-sm" id="btn-parar-tudo" onclick="pararTudo()">
               ⏹ &nbsp;Parar Tudo / Tela Preta
             </button>
+            <button class="btn btn-amber btn-sm" onclick="abrirConvocacao()">
+              📋 &nbsp;Convocar Ministério
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal de convocação -->
+        <div id="modal-convocacao" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; padding:20px;">
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:14px;">
+
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">📋 Convocar Ministério</span>
+              <button onclick="fecharConvocacao()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">×</button>
+            </div>
+
+            <div>
+              <label class="form-label">Data do Culto</label>
+              <input class="form-input" type="date" id="conv-data" />
+            </div>
+
+            <button class="btn btn-accent btn-sm" style="justify-content:center;" onclick="gerarConvocacao()">
+              ⚡ Gerar Mensagem
+            </button>
+
+            <!-- Mensagem gerada -->
+            <div id="conv-resultado" style="display:none; flex-direction:column; gap:10px;">
+              <label class="form-label">Mensagem pronta para o WhatsApp</label>
+              <textarea
+                id="conv-mensagem"
+                readonly
+                style="width:100%; height:120px; background:var(--bg-deep); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:var(--font-mono); font-size:11px; padding:10px; resize:none; line-height:1.6;"
+              ></textarea>
+              <button class="btn btn-green btn-sm" style="justify-content:center;" onclick="copiarConvocacao()">
+                📋 Copiar Mensagem
+              </button>
+            </div>
+
           </div>
         </div>
 

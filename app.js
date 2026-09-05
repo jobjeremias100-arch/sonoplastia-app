@@ -33,7 +33,7 @@ const COLECAO_FAVORITOS = `salas/${_codigoSala}/favoritos`;
 const COLECAO_CONFIG    = `salas/${_codigoSala}/config`;
 
 // ⚠️ Substitua pelo valor da sua chave da YouTube Data API v3
-const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
+const YOUTUBE_API_KEY = "COLE_SUA_CHAVE_AQUI";
 
 /** Bloqueia re-renderização durante drag-and-drop */
 let _arrastando = false;
@@ -80,6 +80,10 @@ function iniciarOperador() {
   window.adicionarFavAoRoteiro  = adicionarFavAoRoteiro;
   window.removerFavorito        = removerFavorito;
   window.onCategoriaChange      = onCategoriaChange;
+  window.abrirConvocacao        = abrirConvocacao;
+  window.fecharConvocacao       = fecharConvocacao;
+  window.gerarConvocacao        = gerarConvocacao;
+  window.copiarConvocacao       = copiarConvocacao;
 
   // Carrega categorias do Firestore para o select
   _carregarCategorias();
@@ -634,6 +638,72 @@ async function _pararTodosExceto(exceptId) {
     }
   });
   await batch.commit();
+}
+
+// ---------------------------------------------------------------------------
+// Convocação do Ministério
+// ---------------------------------------------------------------------------
+function abrirConvocacao() {
+  const modal = document.getElementById("modal-convocacao");
+  if (!modal) return;
+  modal.style.display = "flex";
+
+  // Define a data padrão para hoje
+  const hoje = new Date();
+  const yyyy = hoje.getFullYear();
+  const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
+  const dd   = String(hoje.getDate()).padStart(2, "0");
+  document.getElementById("conv-data").value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById("conv-resultado").style.display = "none";
+}
+
+function fecharConvocacao() {
+  const modal = document.getElementById("modal-convocacao");
+  if (modal) modal.style.display = "none";
+}
+
+function gerarConvocacao() {
+  const dataInput = document.getElementById("conv-data").value;
+  if (!dataInput) { showToast("Selecione a data do culto.", "error"); return; }
+
+  const sala    = localStorage.getItem("sonoplastia_sala") || "";
+  const salaNome = localStorage.getItem("sonoplastia_sala_nome") || sala;
+
+  // Formata a data
+  const [ano, mes, dia] = dataInput.split("-");
+  const dataObj  = new Date(ano, mes - 1, dia);
+  const dataFmt  = dataObj.toLocaleDateString("pt-BR", {
+    weekday: "long", day: "numeric", month: "long"
+  }).replace(/^\w/, c => c.toUpperCase());
+
+  // Monta o link
+  const baseUrl = `${window.location.origin}${window.location.pathname.replace("index.html", "")}`;
+  const link    = `${baseUrl}planejamento.html?sala=${sala}&culto=${dataInput}`;
+
+  // Monta a mensagem
+  const mensagem =
+`🎵 *Planejamento do Culto — ${dataFmt}*
+
+Ministério, acessem o link abaixo e adicionem as músicas que planejam usar no culto:
+
+${link}
+
+_"Tudo o que fizerem, façam de todo o coração, como para o Senhor."_
+— Colossenses 3:23 🙏`;
+
+  document.getElementById("conv-mensagem").value = mensagem;
+  document.getElementById("conv-resultado").style.display = "flex";
+}
+
+async function copiarConvocacao() {
+  const mensagem = document.getElementById("conv-mensagem").value;
+  try {
+    await navigator.clipboard.writeText(mensagem);
+    showToast("Mensagem copiada! Cole no WhatsApp. ✅", "success");
+    fecharConvocacao();
+  } catch (e) {
+    showToast("Erro ao copiar. Selecione e copie manualmente.", "error");
+  }
 }
 
 // ---------------------------------------------------------------------------
