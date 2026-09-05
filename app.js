@@ -33,7 +33,7 @@ const COLECAO_FAVORITOS = `salas/${_codigoSala}/favoritos`;
 const COLECAO_CONFIG    = `salas/${_codigoSala}/config`;
 
 // ⚠️ Substitua pelo valor da sua chave da YouTube Data API v3
-const YOUTUBE_API_KEY = "COLE_SUA_CHAVE_AQUI";
+const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
 
 /** Bloqueia re-renderização durante drag-and-drop */
 let _arrastando = false;
