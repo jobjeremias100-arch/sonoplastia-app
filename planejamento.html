@@ -356,6 +356,24 @@
       margin-top: 2px;
     }
 
+    .btn-excluir-musica {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 4px 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .btn-excluir-musica:hover {
+      border-color: var(--red);
+      color: var(--red);
+      background: rgba(240,74,90,0.1);
+    }
+
     .lista-vazia {
       text-align: center;
       color: var(--text-dim);
@@ -587,6 +605,8 @@
     import {
       collection,
       addDoc,
+      deleteDoc,
+      doc,
       onSnapshot,
       query,
       orderBy,
@@ -650,6 +670,7 @@
             <div class="musica-meta">${_esc(m.canal || "")}</div>
             ${m.nome ? `<div class="musica-nome">👤 ${_esc(m.nome)}</div>` : ""}
           </div>
+          <button class="btn-excluir-musica" onclick="excluirMusica('${d.id}')" title="Remover">🗑</button>
         `;
         lista.appendChild(item);
       });
@@ -678,6 +699,18 @@
         return null;
       }
     }
+
+    // ── Excluir música ──
+    window.excluirMusica = async (musicaId) => {
+      if (!confirm("Remover esta música do planejamento?")) return;
+      try {
+        await deleteDoc(doc(db, `salas/${sala}/planejamento/${cultoStr}/musicas`, musicaId));
+        showToast("Música removida.", "info");
+      } catch (e) {
+        console.error(e);
+        showToast("Erro ao remover.", "error");
+      }
+    };
 
     // ── Adicionar música ──
     window.adicionarMusica = async () => {

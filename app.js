@@ -86,6 +86,7 @@ function iniciarOperador() {
   window.copiarConvocacao       = copiarConvocacao;
   window.carregarPlanejamento   = carregarPlanejamento;
   window.importarPlanejamento   = importarPlanejamento;
+  window.togglePlanejamento     = togglePlanejamento;
 
   // Mostra seção de planejamento e define data padrão
   const secao = document.getElementById("secao-planejamento");
@@ -655,9 +656,34 @@ async function _pararTodosExceto(exceptId) {
 }
 
 // ---------------------------------------------------------------------------
-// Planejamento do Ministério
+// Planejamento da Equipe de Louvor
 // ---------------------------------------------------------------------------
-let _musicasPlanejadas = [];
+let _musicasPlanejadas  = [];
+let _planejamentoAberto = false;
+
+function togglePlanejamento() {
+  _planejamentoAberto = !_planejamentoAberto;
+  const conteudo = document.getElementById("plan-conteudo");
+  const chip     = document.getElementById("plan-chip");
+  if (!conteudo) return;
+
+  if (_planejamentoAberto) {
+    conteudo.style.display = "block";
+    const inputData = document.getElementById("plan-data");
+    if (inputData && inputData.value) carregarPlanejamento(inputData.value);
+  } else {
+    conteudo.style.display = "none";
+  }
+  _atualizarChip();
+}
+
+function _atualizarChip() {
+  const chip  = document.getElementById("plan-chip");
+  if (!chip) return;
+  const count = _musicasPlanejadas.length;
+  const texto = count > 0 ? `${count} música${count > 1 ? "s" : ""} ` : "— ";
+  chip.textContent = texto + (_planejamentoAberto ? "▲" : "▼");
+}
 
 async function carregarPlanejamento(dataStr) {
   const lista   = document.getElementById("plan-lista");
@@ -679,6 +705,7 @@ async function carregarPlanejamento(dataStr) {
 
     _musicasPlanejadas = [];
     snap.forEach(d => _musicasPlanejadas.push({ id: d.id, ...d.data() }));
+    _atualizarChip();
 
     lista.innerHTML = _musicasPlanejadas.map(m => `
       <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border);">
@@ -722,7 +749,7 @@ async function importarPlanejamento() {
     _musicasPlanejadas.forEach((m) => {
       const novoRef = doc(collection(db, COLECAO_ROTEIRO));
       batch.set(novoRef, {
-        titulo:    m.titulo || "Música do Ministério",
+        titulo:    m.titulo || "Música da Equipe de Louvor",
         tipo:      "youtube",
         url:       m.link,
         status:    "parado",
@@ -743,7 +770,7 @@ async function importarPlanejamento() {
 }
 
 // ---------------------------------------------------------------------------
-// Convocação do Ministério
+// Convocação da Equipe de Louvor
 // ---------------------------------------------------------------------------
 function abrirConvocacao() {
   const modal = document.getElementById("modal-convocacao");
@@ -786,7 +813,7 @@ function gerarConvocacao() {
   const mensagem =
 `🎵 *Planejamento do Culto — ${dataFmt}*
 
-Ministério, acessem o link abaixo e adicionem as músicas que planejam usar no culto:
+Equipe de Louvor, acessem o link abaixo e adicionem as músicas que planejam usar no culto:
 
 ${link}
 

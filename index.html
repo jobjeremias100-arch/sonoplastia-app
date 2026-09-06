@@ -1040,7 +1040,7 @@
               ⏹ &nbsp;Parar Tudo / Tela Preta
             </button>
             <button class="btn btn-amber btn-sm" onclick="abrirConvocacao()">
-              📋 &nbsp;Convocar Ministério
+              📋 &nbsp;Convocar Equipe de Louvor
             </button>
           </div>
         </div>
@@ -1050,7 +1050,7 @@
           <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:14px;">
 
             <div style="display:flex; align-items:center; justify-content:space-between;">
-              <span style="font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">📋 Convocar Ministério</span>
+              <span style="font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">📋 Convocar Equipe de Louvor</span>
               <button onclick="fecharConvocacao()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">×</button>
             </div>
 
@@ -1079,27 +1079,39 @@
           </div>
         </div>
 
-        <!-- Planejamento do Ministério -->
+        <!-- Planejamento da Equipe de Louvor -->
         <div class="side-section" id="secao-planejamento" style="display:none;">
-          <div class="side-section-title">🎵 &nbsp;Planejamento do Ministério</div>
 
-          <!-- Seletor de data -->
-          <div class="form-group" style="margin-bottom:10px;">
-            <label class="form-label">Data do Culto</label>
-            <input class="form-input" type="date" id="plan-data" onchange="carregarPlanejamento(this.value)" />
+          <!-- Header clicável -->
+          <div onclick="togglePlanejamento()" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;">
+            <div class="side-section-title" style="margin-bottom:0;">🎵 &nbsp;Planejamento da Equipe de Louvor</div>
+            <span id="plan-chip" style="font-size:10px; font-weight:700; letter-spacing:0.08em; color:var(--accent); background:var(--accent-dim); border:1px solid var(--accent); border-radius:99px; padding:2px 10px; white-space:nowrap; flex-shrink:0; margin-left:8px;">
+              — ▼
+            </span>
           </div>
 
-          <!-- Lista de músicas planejadas -->
-          <div id="plan-lista" style="margin-bottom:10px;">
-            <div style="font-size:11px; color:var(--text-dim); font-style:italic; text-align:center; padding:12px 0;">
-              Selecione uma data para ver o planejamento.
+          <!-- Conteúdo colapsável -->
+          <div id="plan-conteudo" style="display:none; margin-top:14px;">
+
+            <!-- Seletor de data -->
+            <div class="form-group" style="margin-bottom:10px;">
+              <label class="form-label">Data do Culto</label>
+              <input class="form-input" type="date" id="plan-data" onchange="carregarPlanejamento(this.value)" />
             </div>
-          </div>
 
-          <!-- Botão importar -->
-          <button class="btn btn-green btn-sm" style="width:100%; justify-content:center;" onclick="importarPlanejamento()" id="btn-importar" style="display:none;">
-            ⬇ Importar para o Roteiro
-          </button>
+            <!-- Lista de músicas planejadas -->
+            <div id="plan-lista" style="margin-bottom:10px;">
+              <div style="font-size:11px; color:var(--text-dim); font-style:italic; text-align:center; padding:12px 0;">
+                Selecione uma data para ver o planejamento.
+              </div>
+            </div>
+
+            <!-- Botão importar -->
+            <button class="btn btn-green btn-sm" style="width:100%; justify-content:center; display:none;" onclick="importarPlanejamento()" id="btn-importar">
+              ⬇ Importar para o Roteiro
+            </button>
+
+          </div>
         </div>
 
         <!-- Adicionar item YouTube manualmente -->
