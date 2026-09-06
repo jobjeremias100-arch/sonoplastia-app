@@ -13,32 +13,17 @@ import {
   addDoc,
   updateDoc,
   setDoc,
-  getDoc,
-  deleteDoc,
   doc,
   serverTimestamp,
   writeBatch,
   getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 // =============================================================================
-// CONSTANTES E SALA
+// CONSTANTES
 // =============================================================================
 
-// Lê o código da sala salvo no login
-const _codigoSala = localStorage.getItem("sonoplastia_sala") || "default";
-
-// Prefixo das coleções — tudo isolado por sala
-const COLECAO_ROTEIRO   = `salas/${_codigoSala}/roteiro`;
-const COLECAO_FAVORITOS = `salas/${_codigoSala}/favoritos`;
-const COLECAO_CONFIG    = `salas/${_codigoSala}/config`;
-
-// ⚠️ Substitua pelo valor da sua chave da YouTube Data API v3
-const YOUTUBE_API_KEY = "AIzaSyCEiaokNZ4R3DWeuaxXaJ5Ia5x8jqgrzgk";
-
-/** Bloqueia re-renderização durante drag-and-drop */
-let _arrastando = false;
-let _favoritosIds   = new Set();
-let _favoritosCache = [];
+const COLECAO_ROTEIRO = "roteiro";
 
 const roteiroQuery = query(
   collection(db, COLECAO_ROTEIRO),
@@ -51,10 +36,6 @@ const roteiroQuery = query(
 
 const isOperador = document.getElementById("roteiro-list") !== null;
 const isProjecao = document.getElementById("projecao-container") !== null;
-
-// Expõe atualizarVolume globalmente para o slider HTML poder chamar
-// (precisa estar antes do iniciarOperador)
-window.atualizarVolume = atualizarVolume;
 
 if (isOperador) iniciarOperador();
 if (isProjecao)  iniciarProjecao();
@@ -70,41 +51,13 @@ if (isProjecao)  iniciarProjecao();
 let _modoAtual = "estendida";
 
 function iniciarOperador() {
-  window.abrirProjecao          = abrirProjecao;
-  window.pararTudo              = pararTudo;
-  window.adicionarYoutube       = adicionarYoutube;
-  window.atualizarVolume        = atualizarVolume;
-  window.colarLink              = colarLink;
-  window.abrirYoutube           = abrirYoutube;
-  window.toggleFavoritos        = toggleFavoritos;
-  window.adicionarFavAoRoteiro  = adicionarFavAoRoteiro;
-  window.removerFavorito        = removerFavorito;
-  window.onCategoriaChange      = onCategoriaChange;
-  window.abrirConvocacao        = abrirConvocacao;
-  window.fecharConvocacao       = fecharConvocacao;
-  window.gerarConvocacao        = gerarConvocacao;
-  window.copiarConvocacao       = copiarConvocacao;
-  window.carregarPlanejamento   = carregarPlanejamento;
-  window.importarPlanejamento   = importarPlanejamento;
-  window.togglePlanejamento     = togglePlanejamento;
-
-  // Mostra seção de planejamento e define data padrão
-  const secao = document.getElementById("secao-planejamento");
-  if (secao) {
-    secao.style.display = "block";
-    const hoje = new Date();
-    const yyyy = hoje.getFullYear();
-    const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
-    const dd   = String(hoje.getDate()).padStart(2, "0");
-    const inputData = document.getElementById("plan-data");
-    if (inputData) inputData.value = `${yyyy}-${mm}-${dd}`;
-  }
-
-  // Carrega categorias do Firestore para o select
-  _carregarCategorias();
+  window.abrirProjecao    = abrirProjecao;
+  window.pararTudo        = pararTudo;
+  window.adicionarYoutube = adicionarYoutube;
+  window.atualizarVolume  = atualizarVolume;
 
   // Escuta o modo de operação em tempo real
-  const docConfig = doc(db, COLECAO_CONFIG, "app");
+  const docConfig = doc(db, "config", "app");
   onSnapshot(docConfig, (snap) => {
     if (!snap.exists()) return;
     const data = snap.data();
@@ -119,32 +72,6 @@ function iniciarOperador() {
     const label  = document.getElementById("volume-valor");
     if (slider) slider.value = vol;
     if (label)  label.textContent = `${vol}%`;
-  });
-
-  // Escuta favoritos em tempo real para colorir estrelas e renderizar painel
-  onSnapshot(collection(db, COLECAO_FAVORITOS), (snap) => {
-    _favoritosIds = new Set();
-    _favoritosCache = [];
-    snap.forEach((d) => {
-      _favoritosIds.add(d.id);
-      _favoritosCache.push({ id: d.id, ...d.data() });
-    });
-
-    // Atualiza contador no botão
-    const badge = document.getElementById("favoritos-count");
-    if (badge) {
-      badge.textContent = _favoritosCache.length;
-      badge.classList.toggle("visivel", _favoritosCache.length > 0);
-    }
-
-    // Re-renderiza painel de favoritos se estiver aberto
-    _renderizarFavoritos();
-
-    // Re-renderiza lista para atualizar estrelas
-    const listEl = document.getElementById("roteiro-list");
-    if (listEl && listEl._itensCache) {
-      _renderizarLista(listEl, listEl._itensCache);
-    }
   });
 
   _escutarRoteiro();
@@ -194,11 +121,7 @@ function _escutarRoteiro() {
         nowPlayEl.textContent = "Nenhum item ativo";
       }
 
-      // Não re-renderiza durante drag-and-drop
-      if (_arrastando) return;
-
       _renderizarLista(listEl, itens);
-      listEl._itensCache = itens;
     },
     (error) => {
       console.error("Firestore error:", error);
@@ -249,7 +172,6 @@ function _renderizarLista(container, itens) {
       tocando:   "Tocando ao vivo",
     }[item.status] || item.status;
 
-    const isFavorito  = _favoritosIds.has(item.id);
     const isTocando   = item.status === "tocando";
     const isPreparado = item.status === "preparado";
 
@@ -257,15 +179,7 @@ function _renderizarLista(container, itens) {
       <div class="item-ordem">${index + 1}</div>
 
       <div class="item-info">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-          <button
-            class="btn btn-xs"
-            title="${isFavorito ? 'Remover dos favoritos' : 'Salvar nos favoritos'}"
-            style="color:${isFavorito ? 'var(--amber)' : 'var(--text-dim)'}; border-color:${isFavorito ? 'var(--amber)' : 'var(--border)'}; padding:2px 8px; font-size:12px;"
-            onclick="salvarFavorito('${item.id}')"
-          >${isFavorito ? '★' : '☆'}</button>
-          <div class="item-titulo">${_escapeHtml(item.titulo)}</div>
-        </div>
+        <div class="item-titulo">${_escapeHtml(item.titulo)}</div>
         <div class="item-meta">
           <span class="item-badge ${badgeClass}">${badgeLabel}</span>
           <span class="item-status-text">${statusLabel}</span>
@@ -289,16 +203,6 @@ function _renderizarLista(container, itens) {
           ${isTocando ? "⏸ Pausar" : "▶ Play"}
         </button>
 
-        ${isTocando || isPreparado ? `
-        <button
-          class="btn btn-xs"
-          title="Reiniciar do início"
-          style="color:var(--text-muted); border-color:var(--border);"
-          onclick="reiniciarItem('${item.id}')"
-        >
-          ⏮ Início
-        </button>` : ''}
-
         <button
           class="btn btn-xs"
           style="color:var(--red); border-color:var(--red);"
@@ -311,60 +215,9 @@ function _renderizarLista(container, itens) {
     container.appendChild(card);
   });
 
-  window.prepararItem   = prepararItem;
-  window.togglePlay     = togglePlay;
-  window.removerItem    = removerItem;
-  window.salvarFavorito = salvarFavorito;
-  window.reiniciarItem  = reiniciarItem;
-
-  // Inicializa o drag-and-drop após renderizar
-  _inicializarSortable(container, itens);
-}
-
-// ---------------------------------------------------------------------------
-// Inicializa o Sortable na lista do roteiro
-// ---------------------------------------------------------------------------
-function _inicializarSortable(container, itens) {
-  // Destrói instância anterior se existir
-  if (container._sortable) container._sortable.destroy();
-
-  if (typeof Sortable === "undefined") return;
-
-  container._sortable = new Sortable(container, {
-    animation:        200,
-    ghostClass:       "sortable-ghost",
-    chosenClass:      "sortable-chosen",
-    delay:            150,
-    delayOnTouchOnly: true,
-
-    onStart: () => {
-      _arrastando = true;  // pausa o onSnapshot
-    },
-
-    onEnd: async (evt) => {
-      // Recalcula a nova ordem baseada na posição dos cards
-      const cards = [...container.querySelectorAll(".roteiro-item")];
-      const batch  = writeBatch(db);
-
-      cards.forEach((card, novaOrdem) => {
-        const id = card.dataset.id;
-        if (id) {
-          batch.update(doc(db, COLECAO_ROTEIRO, id), { ordem: novaOrdem });
-        }
-      });
-
-      try {
-        await batch.commit();
-        showToast("Ordem atualizada!", "success");
-      } catch (e) {
-        console.error(e);
-        showToast("Erro ao salvar nova ordem.", "error");
-      } finally {
-        // Retoma re-renderização após salvar
-        setTimeout(() => { _arrastando = false; }, 500);
-      }
-    },
-  });
+  window.prepararItem = prepararItem;
+  window.togglePlay   = togglePlay;
+  window.removerItem  = removerItem;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,117 +282,12 @@ async function togglePlay(itemId, statusAtual) {
 async function removerItem(itemId) {
   if (!confirm("Remover este item do roteiro?")) return;
   try {
+    const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     await deleteDoc(doc(db, COLECAO_ROTEIRO, itemId));
     showToast("Item removido.", "info");
   } catch (e) {
     console.error(e);
     showToast("Erro ao remover item.", "error");
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Painel flutuante de favoritos
-// ---------------------------------------------------------------------------
-function toggleFavoritos() {
-  const painel = document.getElementById("favoritos-painel");
-  if (!painel) return;
-  painel.classList.toggle("aberto");
-  _renderizarFavoritos();
-}
-
-function _renderizarFavoritos() {
-  const lista = document.getElementById("favoritos-lista");
-  if (!lista) return;
-
-  if (_favoritosCache.length === 0) {
-    lista.innerHTML = `<span class="favoritos-vazio">Nenhum favorito salvo ainda. Clique em ☆ em um item do roteiro.</span>`;
-    return;
-  }
-
-  lista.innerHTML = _favoritosCache.map(fav => `
-    <div class="favorito-chip">
-      <span class="favorito-chip-nome">★ ${_escapeHtml(fav.titulo)}</span>
-      <button class="favorito-chip-add" onclick="adicionarFavAoRoteiro('${fav.id}')">
-        + Roteiro
-      </button>
-      <button class="favorito-chip-rem" onclick="removerFavorito('${fav.id}')" title="Remover dos favoritos">
-        ×
-      </button>
-    </div>
-  `).join("");
-}
-
-async function adicionarFavAoRoteiro(favId) {
-  try {
-    const fav = _favoritosCache.find(f => f.id === favId);
-    if (!fav) return;
-
-    const snapshot  = await getDocs(roteiroQuery);
-    const proxOrdem = snapshot.size;
-
-    await addDoc(collection(db, COLECAO_ROTEIRO), {
-      titulo:    fav.titulo,
-      tipo:      fav.tipo,
-      url:       fav.url,
-      status:    "parado",
-      ordem:     proxOrdem,
-      criadoEm:  serverTimestamp(),
-    });
-
-    showToast(`"${fav.titulo}" adicionado ao roteiro!`, "success");
-
-    // Fecha o painel após adicionar
-    const painel = document.getElementById("favoritos-painel");
-    if (painel) painel.classList.remove("aberto");
-
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao adicionar favorito ao roteiro.", "error");
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Reinicia o vídeo do início
-// ---------------------------------------------------------------------------
-async function reiniciarItem(itemId) {
-  try {
-    // Usa um campo especial "reiniciar" como trigger para a projeção
-    await updateDoc(doc(db, COLECAO_ROTEIRO, itemId), {
-      reiniciar: Date.now(), // timestamp único força o onSnapshot a disparar
-      status: "tocando",
-    });
-    showToast("⏮ Reiniciando do início…", "info");
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao reiniciar.", "error");
-  }
-}
-// ---------------------------------------------------------------------------
-async function salvarFavorito(itemId) {
-  try {
-    const favRef = doc(db, COLECAO_FAVORITOS, itemId);
-
-    if (_favoritosIds.has(itemId)) {
-      // Já é favorito → remove
-      await deleteDoc(favRef);
-      showToast("Removido dos favoritos.", "info");
-    } else {
-      // Não é favorito → busca os dados do item e salva
-      const itemSnap = await getDoc(doc(db, COLECAO_ROTEIRO, itemId));
-      if (!itemSnap.exists()) return;
-      const { titulo, tipo, url } = itemSnap.data();
-
-      await setDoc(favRef, {
-        titulo,
-        tipo,
-        url,
-        savedAt: serverTimestamp(),
-      });
-      showToast(`"${titulo}" salvo nos favoritos! ★`, "success");
-    }
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao atualizar favoritos.", "error");
   }
 }
 
@@ -561,68 +309,7 @@ async function pararTudo() {
 }
 
 // ---------------------------------------------------------------------------
-// Cola o link e busca o título automaticamente via YouTube Data API
-// ---------------------------------------------------------------------------
-async function colarLink() {
-  try {
-    const texto = await navigator.clipboard.readText();
-    const campoUrl    = document.getElementById("yt-url");
-    const campoTitulo = document.getElementById("yt-titulo");
-    if (!campoUrl) return;
-
-    campoUrl.value = texto;
-    showToast("Link colado! Buscando título…", "info");
-
-    // Extrai o ID do vídeo e busca o título
-    const videoId = _extrairVideoId(texto);
-    if (videoId && YOUTUBE_API_KEY !== "COLE_SUA_CHAVE_AQUI") {
-      const titulo = await _buscarTituloYoutube(videoId);
-      if (titulo && campoTitulo && !campoTitulo.value) {
-        campoTitulo.value = titulo;
-        showToast(`Título encontrado: "${titulo}"`, "success");
-      }
-    }
-  } catch (e) {
-    showToast("Permita o acesso à área de transferência.", "error");
-  }
-}
-
-// Busca o título do vídeo na YouTube Data API
-async function _buscarTituloYoutube(videoId) {
-  try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (data.items && data.items.length > 0) {
-      return data.items[0].snippet.title;
-    }
-    return null;
-  } catch (e) {
-    console.error("Erro ao buscar título:", e);
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Abre o YouTube no navegador (sem popup bloqueado)
-// ---------------------------------------------------------------------------
-function abrirYoutube() {
-  window.location.href = "https://www.youtube.com";
-}
-
-// ---------------------------------------------------------------------------
-// Remover favorito diretamente do painel
-// ---------------------------------------------------------------------------
-async function removerFavorito(favId) {
-  try {
-    await deleteDoc(doc(db, COLECAO_FAVORITOS, favId));
-    showToast("Removido dos favoritos.", "info");
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao remover favorito.", "error");
-  }
-}
-
+// Controle de volume — salva no Firestore, projeção escuta e aplica
 // ---------------------------------------------------------------------------
 async function atualizarVolume(valor) {
   // Atualiza o label visualmente em tempo real
@@ -634,7 +321,7 @@ async function atualizarVolume(valor) {
   atualizarVolume._timer = setTimeout(async () => {
     try {
       await setDoc(
-        doc(db, COLECAO_CONFIG, "app"),
+        doc(db, "config", "app"),
         { volume: parseInt(valor) },
         { merge: true }
       );
@@ -643,8 +330,6 @@ async function atualizarVolume(valor) {
     }
   }, 300);
 }
-
-async function _pararTodosExceto(exceptId) {
   const snapshot = await getDocs(roteiroQuery);
   const batch    = writeBatch(db);
   snapshot.forEach((d) => {
@@ -656,254 +341,14 @@ async function _pararTodosExceto(exceptId) {
 }
 
 // ---------------------------------------------------------------------------
-// Planejamento da Equipe de Louvor
-// ---------------------------------------------------------------------------
-let _musicasPlanejadas  = [];
-let _planejamentoAberto = false;
-
-function togglePlanejamento() {
-  _planejamentoAberto = !_planejamentoAberto;
-  const conteudo = document.getElementById("plan-conteudo");
-  const chip     = document.getElementById("plan-chip");
-  if (!conteudo) return;
-
-  if (_planejamentoAberto) {
-    conteudo.style.display = "block";
-    const inputData = document.getElementById("plan-data");
-    if (inputData && inputData.value) carregarPlanejamento(inputData.value);
-  } else {
-    conteudo.style.display = "none";
-  }
-  _atualizarChip();
-}
-
-function _atualizarChip() {
-  const chip  = document.getElementById("plan-chip");
-  if (!chip) return;
-  const count = _musicasPlanejadas.length;
-  const texto = count > 0 ? `${count} música${count > 1 ? "s" : ""} ` : "— ";
-  chip.textContent = texto + (_planejamentoAberto ? "▲" : "▼");
-}
-
-async function carregarPlanejamento(dataStr) {
-  const lista   = document.getElementById("plan-lista");
-  const btnImp  = document.getElementById("btn-importar");
-  if (!lista || !dataStr) return;
-
-  lista.innerHTML = `<div style="font-size:11px; color:var(--text-muted); text-align:center; padding:12px 0;">Carregando…</div>`;
-
-  try {
-    const colRef = collection(db, `salas/${_codigoSala}/planejamento/${dataStr}/musicas`);
-    const snap   = await getDocs(query(colRef, orderBy("criadoEm", "asc")));
-
-    if (snap.empty) {
-      _musicasPlanejadas = [];
-      btnImp.style.display = "none";
-      lista.innerHTML = `<div style="font-size:11px; color:var(--text-dim); font-style:italic; text-align:center; padding:12px 0;">Nenhuma música planejada para esta data.</div>`;
-      return;
-    }
-
-    _musicasPlanejadas = [];
-    snap.forEach(d => _musicasPlanejadas.push({ id: d.id, ...d.data() }));
-    _atualizarChip();
-
-    lista.innerHTML = _musicasPlanejadas.map(m => `
-      <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border);">
-        <img src="https://img.youtube.com/vi/${m.videoId || ''}/mqdefault.jpg"
-             style="width:48px; height:34px; border-radius:4px; object-fit:cover; background:var(--bg-deep);"
-             onerror="this.style.display='none'" />
-        <div style="flex:1; overflow:hidden;">
-          <div style="font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            ${_escapeHtml(m.titulo || "Sem título")}
-          </div>
-          ${m.nome ? `<div style="font-size:10px; color:var(--accent);">👤 ${_escapeHtml(m.nome)}</div>` : ""}
-        </div>
-      </div>
-    `).join("");
-
-    // Remove borda do último
-    lista.lastElementChild && (lista.lastElementChild.style.borderBottom = "none");
-    btnImp.style.display = "block";
-
-  } catch (e) {
-    console.error(e);
-    lista.innerHTML = `<div style="font-size:11px; color:var(--red); text-align:center; padding:12px 0;">Erro ao carregar planejamento.</div>`;
-  }
-}
-
-async function importarPlanejamento() {
-  if (!_musicasPlanejadas.length) {
-    showToast("Nenhuma música para importar.", "error");
-    return;
-  }
-
-  const btnImp = document.getElementById("btn-importar");
-  btnImp.textContent = "Importando…";
-  btnImp.disabled    = true;
-
-  try {
-    const snapshot  = await getDocs(roteiroQuery);
-    let   proxOrdem = snapshot.size;
-    const batch     = writeBatch(db);
-
-    _musicasPlanejadas.forEach((m) => {
-      const novoRef = doc(collection(db, COLECAO_ROTEIRO));
-      batch.set(novoRef, {
-        titulo:    m.titulo || "Música da Equipe de Louvor",
-        tipo:      "youtube",
-        url:       m.link,
-        status:    "parado",
-        ordem:     proxOrdem++,
-        criadoEm:  serverTimestamp(),
-      });
-    });
-
-    await batch.commit();
-    showToast(`${_musicasPlanejadas.length} música(s) importada(s) para o roteiro! ✅`, "success");
-  } catch (e) {
-    console.error(e);
-    showToast("Erro ao importar. Tente novamente.", "error");
-  } finally {
-    btnImp.textContent = "⬇ Importar para o Roteiro";
-    btnImp.disabled    = false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Convocação da Equipe de Louvor
-// ---------------------------------------------------------------------------
-function abrirConvocacao() {
-  const modal = document.getElementById("modal-convocacao");
-  if (!modal) return;
-  modal.style.display = "flex";
-
-  // Define a data padrão para hoje
-  const hoje = new Date();
-  const yyyy = hoje.getFullYear();
-  const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
-  const dd   = String(hoje.getDate()).padStart(2, "0");
-  document.getElementById("conv-data").value = `${yyyy}-${mm}-${dd}`;
-  document.getElementById("conv-resultado").style.display = "none";
-}
-
-function fecharConvocacao() {
-  const modal = document.getElementById("modal-convocacao");
-  if (modal) modal.style.display = "none";
-}
-
-function gerarConvocacao() {
-  const dataInput = document.getElementById("conv-data").value;
-  if (!dataInput) { showToast("Selecione a data do culto.", "error"); return; }
-
-  const sala    = localStorage.getItem("sonoplastia_sala") || "";
-  const salaNome = localStorage.getItem("sonoplastia_sala_nome") || sala;
-
-  // Formata a data
-  const [ano, mes, dia] = dataInput.split("-");
-  const dataObj  = new Date(ano, mes - 1, dia);
-  const dataFmt  = dataObj.toLocaleDateString("pt-BR", {
-    weekday: "long", day: "numeric", month: "long"
-  }).replace(/^\w/, c => c.toUpperCase());
-
-  // Monta o link
-  const baseUrl = `${window.location.origin}${window.location.pathname.replace("index.html", "")}`;
-  const link    = `${baseUrl}planejamento.html?sala=${sala}&culto=${dataInput}`;
-
-  // Monta a mensagem
-  const mensagem =
-`🎵 *Planejamento do Culto — ${dataFmt}*
-
-Equipe de Louvor, acessem o link abaixo e adicionem as músicas que planejam usar no culto:
-
-${link}
-
-_"Tudo o que fizerem, façam de todo o coração, como para o Senhor."_
-— Colossenses 3:23 🙏`;
-
-  document.getElementById("conv-mensagem").value = mensagem;
-  document.getElementById("conv-resultado").style.display = "flex";
-}
-
-async function copiarConvocacao() {
-  const mensagem = document.getElementById("conv-mensagem").value;
-  try {
-    await navigator.clipboard.writeText(mensagem);
-    showToast("Mensagem copiada! Cole no WhatsApp. ✅", "success");
-    fecharConvocacao();
-  } catch (e) {
-    showToast("Erro ao copiar. Selecione e copie manualmente.", "error");
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Categorias do Roteiro
-// ---------------------------------------------------------------------------
-async function _carregarCategorias() {
-  const select = document.getElementById("yt-categoria");
-  if (!select) return;
-
-  try {
-    const snap = await getDoc(doc(db, COLECAO_CONFIG, "categorias"));
-    const lista = snap.exists() ? (snap.data().lista || []) : [
-      "Música Especial", "Louvor Congregacional", "Hino do Serviço",
-      "Adoração Infantil", "Ofertório", "Provai e Vede", "Informativo"
-    ];
-
-    select.innerHTML = `
-      <option value="">Selecione uma categoria…</option>
-      ${lista.map(c => `<option value="${_escapeHtml(c)}">${_escapeHtml(c)}</option>`).join("")}
-      <option value="__livre__">✏️ Digitar livremente…</option>
-    `;
-  } catch (e) {
-    console.error("Erro ao carregar categorias:", e);
-    select.innerHTML = `<option value="__livre__">✏️ Digitar livremente…</option>`;
-  }
-}
-
-// Mostra/esconde campos conforme seleção
-function onCategoriaChange(valor) {
-  const campoLivre   = document.getElementById("yt-titulo");
-  const campoDetalhe = document.getElementById("yt-detalhe");
-  if (!campoLivre || !campoDetalhe) return;
-
-  if (valor === "__livre__") {
-    // Modo livre: esconde detalhe, mostra campo livre
-    campoDetalhe.style.display = "none";
-    campoDetalhe.value         = "";
-    campoLivre.style.display   = "block";
-    campoLivre.focus();
-  } else {
-    // Categoria selecionada: mostra detalhe, esconde campo livre
-    campoDetalhe.style.display = "block";
-    campoLivre.style.display   = "none";
-    campoLivre.value           = "";
-    campoDetalhe.focus();
-  }
-}
+// Adicionar item do YouTube
 // ---------------------------------------------------------------------------
 async function adicionarYoutube() {
-  const select     = document.getElementById("yt-categoria");
-  const campoLivre = document.getElementById("yt-titulo");
-  const url        = document.getElementById("yt-url").value.trim();
+  const titulo = document.getElementById("yt-titulo").value.trim();
+  const url    = document.getElementById("yt-url").value.trim();
 
-  // Define o título conforme a seleção
-  let tituloBase = "";
-  if (select && select.value === "__livre__") {
-    tituloBase = campoLivre ? campoLivre.value.trim() : "";
-  } else if (select && select.value) {
-    const detalhe = document.getElementById("yt-detalhe")?.value.trim();
-    tituloBase = detalhe ? `${select.value} — ${detalhe}` : select.value;
-  } else if (campoLivre) {
-    tituloBase = campoLivre.value.trim();
-  }
-
-  if (!tituloBase) {
-    showToast("Selecione uma categoria ou digite um título.", "error");
-    return;
-  }
-
-  if (!url) {
-    showToast("Cole a URL do YouTube.", "error");
+  if (!titulo || !url) {
+    showToast("Preencha o título e a URL do YouTube.", "error");
     return;
   }
 
@@ -916,17 +361,6 @@ async function adicionarYoutube() {
     const snapshot  = await getDocs(roteiroQuery);
     const proxOrdem = snapshot.size;
 
-    // Conta repetições para numerar automaticamente
-    let contador = 0;
-    snapshot.forEach((d) => {
-      const t = d.data().titulo || "";
-      if (t === tituloBase || t.match(new RegExp(`^${tituloBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\d+$`))) {
-        contador++;
-      }
-    });
-
-    const titulo = contador === 0 ? tituloBase : `${tituloBase} ${contador + 1}`;
-
     await addDoc(collection(db, COLECAO_ROTEIRO), {
       titulo,
       tipo:     "youtube",
@@ -936,12 +370,8 @@ async function adicionarYoutube() {
       criadoEm: serverTimestamp(),
     });
 
-    // Limpa os campos
-    if (select)     { select.value = ""; }
-    if (campoLivre) { campoLivre.value = ""; campoLivre.style.display = "none"; }
-    const campoDetalhe = document.getElementById("yt-detalhe");
-    if (campoDetalhe) { campoDetalhe.value = ""; }
-    document.getElementById("yt-url").value = "";
+    document.getElementById("yt-titulo").value = "";
+    document.getElementById("yt-url").value    = "";
     showToast(`"${titulo}" adicionado ao roteiro!`, "success");
   } catch (e) {
     console.error(e);
@@ -973,7 +403,6 @@ function iniciarProjecao() {
   let ytReady     = false;
   let ytUrlAtual  = null;
   let itemAtualId = null;
-  let reiniciarAtual = null;
 
   const tag = document.createElement("script");
   tag.src   = "https://www.youtube.com/iframe_api";
@@ -985,11 +414,11 @@ function iniciarProjecao() {
       height: "100%",
       playerVars: {
         autoplay:       1,
-        controls:       1, // Controles nativos do YouTube ativados
+        controls:       0,
         modestbranding: 1,
         rel:            0,
         iv_load_policy: 3,
-        fs:             1, // Botão de tela cheia ativado
+        fs:             0,
         enablejsapi:    1,
         origin:         window.location.origin,
       },
@@ -1002,7 +431,7 @@ function iniciarProjecao() {
   // -----------------------------------------------------------------------
   // Escuta o volume do Firestore e aplica nos players
   // -----------------------------------------------------------------------
-  const docConfigProjecao = doc(db, COLECAO_CONFIG, "app");
+  const docConfigProjecao = doc(db, "config", "app");
   onSnapshot(docConfigProjecao, (snap) => {
     if (!snap.exists()) return;
     const vol = snap.data().volume !== undefined ? snap.data().volume / 100 : 1;
@@ -1035,25 +464,21 @@ function iniciarProjecao() {
 
     if (!itemAtivo) {
       _limparTela(ytPlayer, ytReady);
-      itemAtualId    = null;
-      reiniciarAtual = null;
+      itemAtualId = null;
       return;
     }
 
-    const { id, tipo, url, status, reiniciar } = itemAtivo;
-    const mudouItem    = id !== itemAtualId;
-    const deveReiniciar = reiniciar && reiniciar !== reiniciarAtual;
-
-    itemAtualId    = id;
-    reiniciarAtual = reiniciar;
+    const { id, tipo, url, status } = itemAtivo;
+    const mudouItem = id !== itemAtualId;
+    itemAtualId = id;
 
     if (tipo === "youtube") {
-      _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveReiniciar, ytUrlAtual,
+      _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual,
         setYtUrl: (u) => { ytUrlAtual = u; } });
     } else if (tipo === "audio") {
-      _controlarAudio({ url, status, mudouItem, deveReiniciar });
+      _controlarAudio({ url, status, mudouItem });
     } else if (tipo === "video") {
-      _controlarVideo({ url, status, mudouItem, deveReiniciar });
+      _controlarVideo({ url, status, mudouItem });
     }
   });
 }
@@ -1061,7 +486,7 @@ function iniciarProjecao() {
 // ---------------------------------------------------------------------------
 // Controle YouTube na Projeção
 // ---------------------------------------------------------------------------
-function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveReiniciar, ytUrlAtual, setYtUrl }) {
+function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, ytUrlAtual, setYtUrl }) {
   _mostrarPlayer("youtube");
 
   const videoId = _extrairVideoId(url);
@@ -1074,10 +499,6 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveRein
       setYtUrl(url);
       ytPlayer.loadVideoById(videoId);
       if (status === "preparado") ytPlayer.pauseVideo();
-    } else if (deveReiniciar) {
-      // Volta ao início e continua tocando
-      ytPlayer.seekTo(0, true);
-      ytPlayer.playVideo();
     } else {
       if (status === "tocando") {
         ytPlayer.playVideo();
@@ -1092,7 +513,7 @@ function _controlarYoutube({ ytPlayer, ytReady, url, status, mudouItem, deveRein
 // ---------------------------------------------------------------------------
 // Controle Áudio na Projeção
 // ---------------------------------------------------------------------------
-function _controlarAudio({ url, status, mudouItem, deveReiniciar }) {
+function _controlarAudio({ url, status, mudouItem }) {
   _mostrarPlayer("audio");
 
   const audioEl   = document.getElementById("audio-player");
@@ -1101,15 +522,16 @@ function _controlarAudio({ url, status, mudouItem, deveReiniciar }) {
   if (mudouItem || (url && audioEl.src !== url)) {
     audioEl.src = url;
     audioEl.load();
-  } else if (deveReiniciar) {
-    audioEl.currentTime = 0;
   }
 
   if (status === "tocando") {
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        const desbloquear = () => { audioEl.play(); document.removeEventListener("click", desbloquear); };
+        const desbloquear = () => {
+          audioEl.play();
+          document.removeEventListener("click", desbloquear);
+        };
         document.addEventListener("click", desbloquear);
       });
     }
@@ -1123,7 +545,7 @@ function _controlarAudio({ url, status, mudouItem, deveReiniciar }) {
 // ---------------------------------------------------------------------------
 // Controle Vídeo na Projeção
 // ---------------------------------------------------------------------------
-function _controlarVideo({ url, status, mudouItem, deveReiniciar }) {
+function _controlarVideo({ url, status, mudouItem }) {
   _mostrarPlayer("video");
 
   const videoEl = document.getElementById("video-player");
@@ -1131,15 +553,16 @@ function _controlarVideo({ url, status, mudouItem, deveReiniciar }) {
   if (mudouItem || (url && videoEl.src !== url)) {
     videoEl.src = url;
     videoEl.load();
-  } else if (deveReiniciar) {
-    videoEl.currentTime = 0;
   }
 
   if (status === "tocando") {
     const playPromise = videoEl.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        const desbloquear = () => { videoEl.play(); document.removeEventListener("click", desbloquear); };
+        const desbloquear = () => {
+          videoEl.play();
+          document.removeEventListener("click", desbloquear);
+        };
         document.addEventListener("click", desbloquear);
       });
     }
